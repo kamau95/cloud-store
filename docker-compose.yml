@@ -1,0 +1,28 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: cloudstore
+      POSTGRES_PASSWORD: cloudstore_pass
+      POSTGRES_DB: cloudstore
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  vault:
+    image: hashicorp/vault:latest
+    restart: unless-stopped
+    cap_add:
+      - IPC_LOCK
+    environment:
+      VAULT_DEV_ROOT_TOKEN_ID: vault-dev-token
+    ports:
+      - "8200:8200"
+    volumes:
+      - vaultdata:/vault/file
+
+volumes:
+  pgdata:
+  vaultdata:

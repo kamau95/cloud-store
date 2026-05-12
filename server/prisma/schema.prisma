@@ -1,0 +1,74 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+enum Provider {
+  AWS
+  GCP
+  AZURE
+  OTHER
+}
+
+enum OrderStatus {
+  PENDING
+  PAID
+  DELIVERED
+  CANCELLED
+}
+
+enum PaymentProvider {
+  COINBASE
+  BTCPAY
+}
+
+model User {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  passwordHash String
+  role         Role     @default(USER)
+  orders       Order[]
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model Product {
+  id          String    @id @default(uuid())
+  name        String
+  provider    Provider
+  description String
+  priceUsd    Float
+  region      String?
+  specs       Json?
+  stock       Int       @default(0)
+  active      Boolean   @default(true)
+  orders      Order[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+model Order {
+  id              String         @id @default(uuid())
+  userId          String
+  user            User           @relation(fields: [userId], references: [id])
+  productId       String
+  product         Product        @relation(fields: [productId], references: [id])
+  status          OrderStatus    @default(PENDING)
+  paymentProvider PaymentProvider?
+  paymentChargeId String?
+  vaultCredPath   String?
+  amountUsd       Float
+  paidAt          DateTime?
+  deliveredAt     DateTime?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+}
