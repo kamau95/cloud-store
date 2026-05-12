@@ -1,11 +1,11 @@
-FROM node:20-alpine AS client-build
+FROM node:20-bookworm-slim AS client-build
 WORKDIR /app/client
 COPY client/package*.json ./
 RUN npm install
 COPY client/ ./
 RUN npm run build
 
-FROM node:20-alpine AS server-build
+FROM node:20-bookworm-slim AS server-build
 WORKDIR /app/server
 COPY server/package*.json ./
 RUN npm install
@@ -13,7 +13,8 @@ COPY server/ ./
 RUN npx prisma generate
 RUN npm run build
 
-FROM node:20-alpine
+FROM node:20-bookworm-slim
+RUN apt-get update -qq && apt-get install -y -qq openssl ca-certificates && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 COPY --from=server-build /app/server/dist ./server/dist
 COPY --from=server-build /app/server/node_modules ./server/node_modules
