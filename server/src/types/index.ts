@@ -27,6 +27,7 @@ export interface CoinbaseCharge {
   hosted_url: string;
   expires_at: string;
   timeline: { status: string; time: string }[];
+  metadata?: Record<string, string>;
 }
 
 export interface CoinbaseWebhookEvent {
@@ -38,7 +39,17 @@ export interface CoinbaseWebhookEvent {
     name: string;
     timeline: { status: string; time: string }[];
     pricing: Record<string, unknown>;
+    metadata?: Record<string, string>;
   };
+}
+
+export interface BTCPayWebhookEvent {
+  type: string;
+  invoiceId: string;
+  metadata?: {
+    orderId: string;
+  };
+  status: string;
 }
 
 export interface BTCPayInvoice {
