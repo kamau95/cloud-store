@@ -6,11 +6,7 @@ const API_URL = "https://api.paymento.io/v1";
 export interface PaymentoPaymentResponse {
   success: boolean;
   message: string;
-  body: {
-    token: string;
-    orderId: string;
-    additionalData?: { key: string; value: string }[];
-  };
+  body: string;
 }
 
 export interface PaymentoVerifyResponse {
@@ -71,13 +67,13 @@ export async function createPayment(
 
   const json = (await res.json()) as PaymentoPaymentResponse;
 
-  if (!json.success || !json.body?.token) {
+  if (!json.success || !json.body) {
     throw new Error(`Paymento error: ${json.message || "Failed to create payment"}`);
   }
 
   return {
-    token: json.body.token,
-    paymentUrl: `https://app.paymento.io/gateway?token=${json.body.token}`,
+    token: json.body,
+    paymentUrl: `https://app.paymento.io/gateway?token=${json.body}`,
   };
 }
 
