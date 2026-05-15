@@ -36,7 +36,8 @@ export async function checkout(req: AuthRequest, res: Response): Promise<void> {
   });
 
   try {
-    const returnUrl = `${process.env.FRONTEND_URL || "http://localhost:5173"}/orders/${order.id}`;
+    const frontendUrl = process.env.FRONTEND_URL || (process.env.NODE_ENV === "production" ? `https://${req.get("host")}` : "http://localhost:5173");
+    const returnUrl = `${frontendUrl}/orders/${order.id}`;
     const result = await paymento.createPayment(product.priceUsd, order.id, returnUrl);
 
     await prisma.order.update({
