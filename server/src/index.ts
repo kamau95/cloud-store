@@ -7,6 +7,7 @@ import productRoutes from "./routes/products";
 import orderRoutes from "./routes/orders";
 import webhookRoutes from "./routes/webhooks";
 import adminRoutes from "./routes/admin";
+import { seedDatabase } from "./seed";
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -43,6 +44,15 @@ app.use((err: Error, _req: express.Request, res: express.Response, _next: expres
   res.status(500).json({ error: "Internal server error" });
 });
 
-app.listen(PORT, () => {
-  console.log(`Server running on http://localhost:${PORT}`);
-});
+seedDatabase()
+  .then(() => {
+    app.listen(PORT, () => {
+      console.log(`Server running on http://localhost:${PORT}`);
+    });
+  })
+  .catch((err) => {
+    console.error("Seed failed, starting server anyway:", err);
+    app.listen(PORT, () => {
+      console.log(`Server running on http://localhost:${PORT}`);
+    });
+  });
