@@ -1,47 +1,51 @@
 import { Request, Response } from "express";
 import { PrismaClient } from "@prisma/client";
 import * as vault from "../services/vault";
-import { CoinbaseWebhookEvent, BTCPayWebhookEvent } from "../types";
+import * as paymento from "../services/paymento";
+import { PaymentoWebhookPayload } from "../types";
 
 const prisma = new PrismaClient();
 
-export async function handleCoinbaseWebhook(req: Request, res: Response): Promise<void> {
-  const event = req.body as CoinbaseWebhookEvent;
+const PAYMENTO_STATUS = {
+  PAID: 7,
+  APPROVE: 8,
+} as const;
 
-  if (event.type === "charge:confirmed" || event.type === "charge:completed") {
-    const chargeId = event.data.id;
-    const metadata = event.data.metadata || {};
-    const orderId = metadata.orderId;
+export async function handlePaymentoWebhook(req: Request, res: Response): Promise<void> {
+  const event = req.body as PaymentoWebhookPayload;
+  const { token, orderId, orderStatus } = event;
 
-    if (orderId) {
-      await processPayment("COINBASE", chargeId, orderId);
-    } else {
-      console.warn(`Coinbase webhook missing orderId metadata for charge ${chargeId}`);
-    }
+  if (!token || !orderId) {
+    console.warn("Paymento webhook missing token or orderId");
+    res.status(200).json({ received: true });
+    return;
   }
 
-  res.status(200).json({ received: true });
-}
+  if (orderStatus !== PAYMENTO_STATUS.PAID && orderStatus !== PAYMENTO_STATUS.APPROVE) {
+    console.log(`Paymento webhook: order ${orderId} status ${orderStatus} not actionable`);
+    res.status(200).json({ received: true });
+    return;
+  }
 
-export async function handleBTCPayWebhook(req: Request, res: Response): Promise<void> {
-  const event = req.body as BTCPayWebhookEvent;
+  try {
+    const verified = await paymento.verifyPayment(token);
 
-  if (event.type === "InvoiceReceivedPayment" || event.type === "InvoiceSettled") {
-    const invoiceId = event.invoiceId;
-    const orderId = event.metadata?.orderId;
-
-    if (orderId) {
-      await processPayment("BTCPAY", invoiceId, orderId);
-    } else {
-      console.warn(`BTCPay webhook missing orderId metadata for invoice ${invoiceId}`);
+    if (verified.orderStatus !== PAYMENTO_STATUS.PAID && verified.orderStatus !== PAYMENTO_STATUS.APPROVE) {
+      console.warn(`Paymento verify: order ${orderId} status ${verified.orderStatus} not confirmed`);
+      res.status(200).json({ received: true });
+      return;
     }
+
+    await processPayment("PAYMENTO", token, orderId);
+  } catch (err) {
+    console.error(`Paymento verify failed for order ${orderId}:`, (err as Error).message);
   }
 
   res.status(200).json({ received: true });
 }
 
 async function processPayment(
-  provider: "COINBASE" | "BTCPAY",
+  provider: "PAYMENTO",
   chargeId: string,
   orderId: string
 ): Promise<void> {
@@ -81,7 +85,7 @@ async function processPayment(
     data: {
       status: "DELIVERED",
       deliveredAt: new Date(),
-      vaultCredPath: reserved.id,
+      credentialId: reserved.id,
     },
   });
 

@@ -1,46 +1,43 @@
-import fetch from "node-fetch";
+import { PrismaClient, Provider } from "@prisma/client";
+import type { Prisma } from "@prisma/client";
 
-const VAULT_ADDR = process.env.VAULT_ADDR || "http://localhost:8200";
-const VAULT_TOKEN = process.env.VAULT_TOKEN || "vault-dev-token";
-const KV_PATH = process.env.VAULT_KV_PATH || "accounts";
+const prisma = new PrismaClient();
 
-async function vaultRequest(method: string, path: string, body?: unknown) {
-  const url = `${VAULT_ADDR}/v1/${path}`;
-  const res = await fetch(url, {
-    method,
-    headers: {
-      "X-Vault-Token": VAULT_TOKEN,
-      "Content-Type": "application/json",
-    },
-    body: body ? JSON.stringify(body) : undefined,
-  });
-
-  if (!res.ok) {
-    const err = await res.text();
-    throw new Error(`Vault error (${res.status}): ${err}`);
-  }
-
-  const contentType = res.headers.get("content-type") || "";
-  if (contentType.includes("application/json")) {
-    return res.json() as Promise<{ data?: Record<string, unknown> }>;
-  }
-  return null;
-}
+type CredentialData = {
+  provider: string;
+  email: string;
+  password: string;
+  accessKey?: string;
+  secretKey?: string;
+  region?: string;
+  specs?: Record<string, unknown>;
+};
 
 export async function storeCredential(
   credId: string,
-  credential: {
-    provider: string;
-    email: string;
-    password: string;
-    accessKey?: string;
-    secretKey?: string;
-    region?: string;
-    specs?: Record<string, unknown>;
-  }
+  credential: CredentialData
 ): Promise<void> {
-  await vaultRequest("POST", `${KV_PATH}/data/${credId}`, {
-    data: credential,
+  const specs = credential.specs as Prisma.InputJsonValue | undefined;
+  await prisma.credential.upsert({
+    where: { id: credId },
+    update: {
+      email: credential.email,
+      password: credential.password,
+      accessKey: credential.accessKey || null,
+      secretKey: credential.secretKey || null,
+      region: credential.region || null,
+      specs,
+    },
+    create: {
+      id: credId,
+      provider: credential.provider as Provider,
+      email: credential.email,
+      password: credential.password,
+      accessKey: credential.accessKey || null,
+      secretKey: credential.secretKey || null,
+      region: credential.region || null,
+      specs,
+    },
   });
 }
 
@@ -48,38 +45,42 @@ export async function getCredential(
   credId: string
 ): Promise<Record<string, unknown> | null> {
   try {
-    const result = await vaultRequest("GET", `${KV_PATH}/data/${credId}`);
-    return (result?.data as { data: Record<string, unknown> })?.data || null;
+    const cred = await prisma.credential.findUnique({
+      where: { id: credId },
+    });
+    if (!cred) return null;
+    return cred as unknown as Record<string, unknown>;
   } catch {
     return null;
   }
 }
 
 export async function deleteCredential(credId: string): Promise<void> {
-  await vaultRequest("DELETE", `${KV_PATH}/meta/${credId}`);
+  await prisma.credential.delete({ where: { id: credId } });
 }
 
 export async function listCredentials(): Promise<string[]> {
-  try {
-    const result = await vaultRequest("LIST", `${KV_PATH}/metadata`);
-    const data = result?.data as { keys?: string[] };
-    return data?.keys || [];
-  } catch {
-    return [];
-  }
+  const creds = await prisma.credential.findMany({
+    select: { id: true },
+    orderBy: { createdAt: "desc" },
+  });
+  return creds.map((c) => c.id);
 }
 
-export async function reserveCredential(provider: string): Promise<{ id: string; data: Record<string, unknown> } | null> {
-  const keys = await listCredentials();
-  const available = keys.filter((k) => k.startsWith(`${provider.toLowerCase()}-`));
+export async function reserveCredential(
+  provider: string
+): Promise<{ id: string; data: Record<string, unknown> } | null> {
+  const cred = await prisma.credential.findFirst({
+    where: { provider: provider as Provider, claimed: false },
+    orderBy: { createdAt: "asc" },
+  });
 
-  for (const key of available) {
-    const cred = await getCredential(key);
-    if (cred && !cred.claimed) {
-      await storeCredential(key, { ...(cred as Record<string, unknown>), claimed: true, claimedAt: new Date().toISOString() } as never);
-      return { id: key, data: cred };
-    }
-  }
+  if (!cred) return null;
 
-  return null;
+  const updated = await prisma.credential.update({
+    where: { id: cred.id },
+    data: { claimed: true, claimedAt: new Date() },
+  });
+
+  return { id: updated.id, data: updated as unknown as Record<string, unknown> };
 }

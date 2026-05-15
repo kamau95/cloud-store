@@ -94,7 +94,7 @@ export default function ProductDetail() {
               {buying ? "Processing..." : "Buy Now"}
             </button>
             <div className="text-xs text-gray-500 text-center">
-              Pay with USDT, USDC, ETH, or BTC via Coinbase Commerce / BTCPay
+              Pay with USDT, USDC, ETH, or BTC via Paymento
             </div>
           </div>
         </div>

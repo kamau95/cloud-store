@@ -29,7 +29,7 @@ export interface Order {
   productId: string;
   product: Product;
   status: "PENDING" | "PAID" | "DELIVERED" | "CANCELLED";
-  paymentProvider: "COINBASE" | "BTCPAY" | null;
+  paymentProvider: "PAYMENTO" | null;
   paymentChargeId: string | null;
   vaultCredPath: string | null;
   amountUsd: number;
@@ -42,6 +42,5 @@ export interface CheckoutResponse {
   orderId: string;
   paymentUrl: string;
   chargeId: string;
-  expiresAt?: string;
   provider?: string;
 }

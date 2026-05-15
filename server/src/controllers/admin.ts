@@ -66,7 +66,7 @@ export async function deliverOrder(req: AuthRequest, res: Response): Promise<voi
       status: "DELIVERED",
       paidAt: new Date(),
       deliveredAt: new Date(),
-      vaultCredPath: reserved.id,
+      credentialId: reserved.id,
     },
   });
 

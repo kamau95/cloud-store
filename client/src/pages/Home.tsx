@@ -39,7 +39,7 @@ export default function Home() {
         <h2 className="text-3xl font-bold text-center mb-12">Why CloudStore?</h2>
         <div className="grid md:grid-cols-3 gap-8">
           {[
-            { title: "Crypto Payments", desc: "Pay with USDT, USDC, ETH, or BTC via Coinbase Commerce or BTCPay Server." },
+            { title: "Crypto Payments", desc: "Pay with USDT, USDC, ETH, or BTC via Paymento." },
             { title: "Instant Delivery", desc: "Credentials delivered automatically on payment confirmation." },
             { title: "No KYC", desc: "Fully anonymous. Email-only registration. Your privacy matters." },
             { title: "Multiple Providers", desc: "AWS, GCP, Azure, and more. One marketplace for all cloud accounts." },
@@ -58,9 +58,13 @@ export default function Home() {
         <div className="max-w-7xl mx-auto px-4 text-center text-sm text-gray-500">
           <p>Accepted Payment Methods</p>
           <div className="flex items-center justify-center gap-6 mt-4">
-            <span className="text-gray-400 font-mono">Coinbase Commerce</span>
+            <span className="text-gray-400 font-mono">USDT</span>
             <span className="text-gray-600">|</span>
-            <span className="text-gray-400 font-mono">BTCPay Server</span>
+            <span className="text-gray-400 font-mono">USDC</span>
+            <span className="text-gray-600">|</span>
+            <span className="text-gray-400 font-mono">ETH</span>
+            <span className="text-gray-600">|</span>
+            <span className="text-gray-400 font-mono">BTC</span>
           </div>
         </div>
       </section>

@@ -1,10 +1,9 @@
 import { Router } from "express";
 import * as webhooks from "../controllers/webhooks";
-import { verifyCoinbaseWebhook, verifyBTCPayWebhook, parseRawJson } from "../middleware/webhook";
+import { verifyPaymentoWebhook, parseRawJson } from "../middleware/webhook";
 
 const router = Router();
 
-router.post("/coinbase", verifyCoinbaseWebhook, parseRawJson, webhooks.handleCoinbaseWebhook);
-router.post("/btcpay", verifyBTCPayWebhook, parseRawJson, webhooks.handleBTCPayWebhook);
+router.post("/paymento", verifyPaymentoWebhook, parseRawJson, webhooks.handlePaymentoWebhook);
 
 export default router;

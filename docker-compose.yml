@@ -11,18 +11,5 @@ services:
     volumes:
       - pgdata:/var/lib/postgresql/data
 
-  vault:
-    image: hashicorp/vault:latest
-    restart: unless-stopped
-    cap_add:
-      - IPC_LOCK
-    environment:
-      VAULT_DEV_ROOT_TOKEN_ID: vault-dev-token
-    ports:
-      - "8200:8200"
-    volumes:
-      - vaultdata:/vault/file
-
 volumes:
   pgdata:
-  vaultdata:
