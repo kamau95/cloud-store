@@ -19,7 +19,7 @@ app.use("/api/orders/webhook", express.raw({ type: "application/json" }), webhoo
 app.use(express.json());
 
 app.get("/api/health", (_req, res) => {
-  res.json({ status: "ok", timestamp: new Date().toISOString() });
+  res.json({ status: "ok", timestamp: new Date().toISOString(), version: "seed-on-startup" });
 });
 
 app.use("/api/auth", authRoutes);
