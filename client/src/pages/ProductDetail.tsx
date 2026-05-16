@@ -32,9 +32,7 @@ export default function ProductDetail() {
     setBuying(true);
     try {
       const data = await api.post<CheckoutResponse>("/orders/checkout", { productId: id });
-      window.open(data.paymentUrl, "_blank");
-      toast.success("Payment page opened");
-      navigate("/orders");
+      navigate(`/checkout/${data.orderId}`);
     } catch (err) {
       toast.error((err as Error).message);
     } finally {
@@ -94,7 +92,7 @@ export default function ProductDetail() {
               {buying ? "Processing..." : "Buy Now"}
             </button>
             <div className="text-xs text-gray-500 text-center">
-              Pay with USDT, USDC, ETH, or BTC via Paymento
+              Pay with USDT (TRC-20) via GatewayCrypto
             </div>
           </div>
         </div>

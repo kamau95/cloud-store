@@ -6,6 +6,7 @@ import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Products from "./pages/Products";
 import ProductDetail from "./pages/ProductDetail";
+import Checkout from "./pages/Checkout";
 import MyOrders from "./pages/MyOrders";
 import OrderDetail from "./pages/OrderDetail";
 import AdminDashboard from "./pages/AdminDashboard";
@@ -23,7 +24,7 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 function AdminRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
   if (loading) return <div className="flex justify-center p-12"><div className="animate-spin h-8 w-8 border-2 border-blue-500 border-t-transparent rounded-full" /></div>;
-  if (!user || user.role !== "ADMIN") return <Navigate to="/" />;
+  if (!user || (user.role !== "ADMIN" && user.role !== "SUPER_ADMIN")) return <Navigate to="/" />;
   return <>{children}</>;
 }
 
@@ -36,6 +37,7 @@ export default function App() {
         <Route path="/register" element={<Register />} />
         <Route path="/products" element={<Products />} />
         <Route path="/products/:id" element={<ProductDetail />} />
+        <Route path="/checkout/:id" element={<ProtectedRoute><Checkout /></ProtectedRoute>} />
         <Route path="/orders" element={<ProtectedRoute><MyOrders /></ProtectedRoute>} />
         <Route path="/orders/:id" element={<ProtectedRoute><OrderDetail /></ProtectedRoute>} />
         <Route path="/admin" element={<AdminRoute><AdminDashboard /></AdminRoute>} />

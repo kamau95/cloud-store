@@ -1,7 +1,7 @@
 export interface User {
   id: string;
   email: string;
-  role: "USER" | "ADMIN";
+  role: "USER" | "ADMIN" | "SUPER_ADMIN";
 }
 
 export interface AuthResponse {
@@ -29,18 +29,36 @@ export interface Order {
   productId: string;
   product: Product;
   status: "PENDING" | "PAID" | "DELIVERED" | "CANCELLED";
-  paymentProvider: "PAYMENTO" | null;
+  paymentProvider: "GATEWAYCRYPTO" | "PAYMENTO" | null;
   paymentChargeId: string | null;
-  vaultCredPath: string | null;
   amountUsd: number;
   paidAt: string | null;
   deliveredAt: string | null;
   createdAt: string;
 }
 
+export interface FeeBreakdown {
+  gatewayFee: number;
+  adminFee: number;
+  sellerAmount: number;
+}
+
 export interface CheckoutResponse {
   orderId: string;
-  paymentUrl: string;
-  chargeId: string;
-  provider?: string;
+  paymentId: string;
+  walletAddress: string;
+  amount: number;
+  basePrice?: number;
+  currency: string;
+  network: string;
+  expiresAt: string;
+  provider: string;
+  feeBreakdown?: FeeBreakdown;
+}
+
+export interface OrderPaymentStatus {
+  orderId: string;
+  status: string;
+  delivered: boolean;
+  credentialId: string | null;
 }

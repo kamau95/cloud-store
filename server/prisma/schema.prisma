@@ -11,6 +11,7 @@ datasource db {
 enum Role {
   USER
   ADMIN
+  SUPER_ADMIN
 }
 
 enum Provider {
@@ -31,6 +32,7 @@ enum PaymentProvider {
   COINBASE
   BTCPAY
   PAYMENTO
+  GATEWAYCRYPTO
 }
 
 model User {
@@ -88,6 +90,14 @@ model Order {
   amountUsd       Float
   paidAt          DateTime?
   deliveredAt     DateTime?
+  cryptoAddress   String?
+  cryptoAmount    Float?
+  cryptoCurrency  String?
+  cryptoNetwork   String?
+  cryptoExpiresAt DateTime?
+  adminFee        Float?
+  gatewayFee      Float?
+  sellerAmount    Float?
   createdAt       DateTime       @default(now())
   updatedAt       DateTime       @updatedAt
 }

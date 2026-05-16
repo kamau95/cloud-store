@@ -101,6 +101,42 @@ export async function uploadAccounts(req: AuthRequest, res: Response): Promise<v
   res.json({ uploaded, errors: errors.length > 0 ? errors : undefined });
 }
 
+export async function getFeeSummary(
+  req: AuthRequest,
+  res: Response
+): Promise<void> {
+  const orders = await prisma.order.findMany({
+    where: { paymentProvider: "GATEWAYCRYPTO", status: "DELIVERED" },
+    select: { amountUsd: true, adminFee: true, gatewayFee: true, sellerAmount: true },
+  });
+
+  const totalProductRevenue = orders.reduce(
+    (sum, o) => sum + o.amountUsd,
+    0
+  );
+  const totalAdminFees = orders.reduce(
+    (sum, o) => sum + (o.adminFee || 0),
+    0
+  );
+  const totalGatewayFees = orders.reduce(
+    (sum, o) => sum + (o.gatewayFee || 0),
+    0
+  );
+  const totalSellerPayouts = orders.reduce(
+    (sum, o) => sum + (o.sellerAmount || 0),
+    0
+  );
+
+  res.json({
+    totalOrders: orders.length,
+    totalProductRevenue,
+    totalAdminFees,
+    totalGatewayFees,
+    totalSellerPayouts,
+    totalCollected: totalProductRevenue,
+  });
+}
+
 export async function listAccountPool(req: AuthRequest, res: Response): Promise<void> {
   const keys = await vault.listCredentials();
   const accounts = [];

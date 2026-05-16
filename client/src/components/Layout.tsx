@@ -23,7 +23,7 @@ export default function Layout({ children }: { children: ReactNode }) {
               <div className="hidden md:flex items-center gap-6">
                 <Link to="/products" className="text-gray-300 hover:text-white transition text-sm">Products</Link>
                 {user && <Link to="/orders" className="text-gray-300 hover:text-white transition text-sm">My Orders</Link>}
-                {user?.role === "ADMIN" && (
+                {(user?.role === "ADMIN" || user?.role === "SUPER_ADMIN") && (
                   <Link to="/admin" className="text-amber-400 hover:text-amber-300 transition text-sm font-medium">Admin</Link>
                 )}
               </div>

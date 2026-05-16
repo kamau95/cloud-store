@@ -2,7 +2,7 @@ import { Response } from "express";
 import { PrismaClient } from "@prisma/client";
 import { z } from "zod";
 import { AuthRequest } from "../types";
-import * as paymento from "../services/paymento";
+import * as gatewaycrypto from "../services/gatewaycrypto";
 import * as vault from "../services/vault";
 
 const prisma = new PrismaClient();
@@ -36,20 +36,46 @@ export async function checkout(req: AuthRequest, res: Response): Promise<void> {
   });
 
   try {
-    const frontendUrl = process.env.FRONTEND_URL || (process.env.NODE_ENV === "production" ? `https://${req.get("host")}` : "http://localhost:5173");
-    const returnUrl = `${frontendUrl}/orders/${order.id}`;
-    const result = await paymento.createPayment(product.priceUsd, order.id, returnUrl);
+    const { paymentAmount, adminFee, gatewayFee, sellerAmount } =
+      gatewaycrypto.calculateFees(product.priceUsd);
+
+    const result = await gatewaycrypto.createPayment(
+      "USDT",
+      paymentAmount,
+      order.id
+    );
 
     await prisma.order.update({
       where: { id: order.id },
-      data: { paymentProvider: "PAYMENTO", paymentChargeId: result.token },
+      data: {
+        paymentProvider: "GATEWAYCRYPTO",
+        paymentChargeId: result.payment_id,
+        cryptoAddress: result.wallet_address,
+        cryptoAmount: parseFloat(result.amount),
+        cryptoCurrency: result.currency,
+        cryptoNetwork: "TRC-20",
+        cryptoExpiresAt: new Date(result.expires_at),
+        gatewayFee,
+        adminFee,
+        sellerAmount,
+      },
     });
 
     res.json({
       orderId: order.id,
-      paymentUrl: result.paymentUrl,
-      chargeId: result.token,
-      provider: "paymento",
+      paymentId: result.payment_id,
+      walletAddress: result.wallet_address,
+      amount: parseFloat(result.amount),
+      basePrice: product.priceUsd,
+      currency: result.currency,
+      network: "TRC-20",
+      expiresAt: result.expires_at,
+      provider: "gatewaycrypto",
+      feeBreakdown: {
+        gatewayFee,
+        adminFee,
+        sellerAmount,
+      },
     });
   } catch (err) {
     await prisma.order.update({
@@ -72,6 +98,75 @@ export async function getMyOrders(req: AuthRequest, res: Response): Promise<void
   });
 
   res.json(orders);
+}
+
+export async function getCheckoutDetails(
+  req: AuthRequest,
+  res: Response
+): Promise<void> {
+  const order = await prisma.order.findUnique({
+    where: { id: req.params.id },
+    include: { product: true },
+  });
+
+  if (!order) {
+    res.status(404).json({ error: "Order not found" });
+    return;
+  }
+
+  if (order.userId !== req.user!.userId && req.user!.role !== "ADMIN") {
+    res.status(403).json({ error: "Not your order" });
+    return;
+  }
+
+  if (order.paymentProvider !== "GATEWAYCRYPTO") {
+    res.status(400).json({ error: "Not a GatewayCrypto order" });
+    return;
+  }
+
+  res.json({
+    orderId: order.id,
+    paymentId: order.paymentChargeId,
+    walletAddress: order.cryptoAddress,
+    amount: order.cryptoAmount || order.amountUsd,
+    currency: order.cryptoCurrency || "USDT",
+    network: order.cryptoNetwork || "TRC-20",
+    expiresAt: order.cryptoExpiresAt?.toISOString(),
+    provider: "gatewaycrypto",
+    status: order.status,
+  });
+}
+
+export async function getOrderPaymentStatus(
+  req: AuthRequest,
+  res: Response
+): Promise<void> {
+  const order = await prisma.order.findUnique({
+    where: { id: req.params.id },
+    select: {
+      id: true,
+      status: true,
+      paymentProvider: true,
+      credentialId: true,
+    },
+  });
+
+  if (!order) {
+    res.status(404).json({ error: "Order not found" });
+    return;
+  }
+
+  if (order.paymentProvider !== "GATEWAYCRYPTO") {
+    res.status(400).json({ error: "Not a GatewayCrypto order" });
+    return;
+  }
+
+  res.json({
+    orderId: order.id,
+    status: order.status,
+    delivered: order.status === "DELIVERED",
+    credentialId: order.credentialId,
+  });
 }
 
 export async function getOrderCredentials(req: AuthRequest, res: Response): Promise<void> {

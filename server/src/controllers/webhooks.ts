@@ -1,51 +1,70 @@
 import { Request, Response } from "express";
 import { PrismaClient } from "@prisma/client";
 import * as vault from "../services/vault";
-import * as paymento from "../services/paymento";
-import { PaymentoWebhookPayload } from "../types";
+import * as gatewaycrypto from "../services/gatewaycrypto";
 
 const prisma = new PrismaClient();
 
-const PAYMENTO_STATUS = {
-  PAID: 7,
-  APPROVE: 8,
+const GC_STATUSES = {
+  COMPLETED: "completed",
+  FINISHED: "finished",
 } as const;
 
-export async function handlePaymentoWebhook(req: Request, res: Response): Promise<void> {
-  const event = req.body as PaymentoWebhookPayload;
-  const { token, orderId, orderStatus } = event;
+export async function handleGatewayCryptoWebhook(
+  req: Request,
+  res: Response
+): Promise<void> {
+  const event = req.body as gatewaycrypto.GatewayCryptoCallbackPayload;
+  const { payment_id, status } = event;
 
-  if (!token || !orderId) {
-    console.warn("Paymento webhook missing token or orderId");
+  if (!payment_id) {
+    console.warn("GatewayCrypto webhook missing payment_id");
     res.status(200).json({ received: true });
     return;
   }
 
-  if (orderStatus !== PAYMENTO_STATUS.PAID && orderStatus !== PAYMENTO_STATUS.APPROVE) {
-    console.log(`Paymento webhook: order ${orderId} status ${orderStatus} not actionable`);
+  if (status !== GC_STATUSES.COMPLETED && status !== GC_STATUSES.FINISHED) {
+    console.log(
+      `GatewayCrypto webhook: payment ${payment_id} status ${status} not actionable`
+    );
     res.status(200).json({ received: true });
     return;
   }
 
   try {
-    const verified = await paymento.verifyPayment(token);
+    const order = await prisma.order.findFirst({
+      where: { paymentChargeId: payment_id, paymentProvider: "GATEWAYCRYPTO" },
+    });
 
-    if (verified.orderStatus !== PAYMENTO_STATUS.PAID && verified.orderStatus !== PAYMENTO_STATUS.APPROVE) {
-      console.warn(`Paymento verify: order ${orderId} status ${verified.orderStatus} not confirmed`);
+    if (!order) {
+      console.error(`No order found for GatewayCrypto payment ${payment_id}`);
       res.status(200).json({ received: true });
       return;
     }
 
-    await processPayment("PAYMENTO", token, orderId);
+    const verified = await gatewaycrypto.getPaymentStatus(payment_id);
+
+    if (verified.status !== GC_STATUSES.COMPLETED && verified.status !== GC_STATUSES.FINISHED) {
+      console.warn(
+        `GatewayCrypto verify: payment ${payment_id} status ${verified.status} not confirmed`
+      );
+      res.status(200).json({ received: true });
+      return;
+    }
+
+    await processPayment("GATEWAYCRYPTO", payment_id, order.id);
   } catch (err) {
-    console.error(`Paymento verify failed for order ${orderId}:`, (err as Error).message);
+    console.error(
+      `GatewayCrypto verify failed for payment ${payment_id}:`,
+      (err as Error).message
+    );
   }
 
   res.status(200).json({ received: true });
 }
 
 async function processPayment(
-  provider: "PAYMENTO",
+  provider: "GATEWAYCRYPTO",
   chargeId: string,
   orderId: string
 ): Promise<void> {

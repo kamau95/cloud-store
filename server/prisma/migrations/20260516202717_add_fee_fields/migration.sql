@@ -1,0 +1,3 @@
+-- AlterTable
+ALTER TABLE "Order" ADD COLUMN     "adminFee" DOUBLE PRECISION,
+ADD COLUMN     "gatewayFee" DOUBLE PRECISION;

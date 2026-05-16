@@ -1,9 +1,17 @@
 import { Router } from "express";
 import * as webhooks from "../controllers/webhooks";
-import { verifyPaymentoWebhook, parseRawJson } from "../middleware/webhook";
+import {
+  verifyGatewayCryptoWebhook,
+  parseRawJson,
+} from "../middleware/gatewaycrypto-webhook";
 
 const router = Router();
 
-router.post("/paymento", verifyPaymentoWebhook, parseRawJson, webhooks.handlePaymentoWebhook);
+router.post(
+  "/gatewaycrypto",
+  verifyGatewayCryptoWebhook,
+  parseRawJson,
+  webhooks.handleGatewayCryptoWebhook
+);
 
 export default router;

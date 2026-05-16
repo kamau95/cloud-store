@@ -15,6 +15,17 @@ export async function seedDatabase() {
     },
   });
 
+  const superPassword = await bcrypt.hash("super123", 12);
+  await prisma.user.upsert({
+    where: { email: "dev@cloudstore.com" },
+    update: {},
+    create: {
+      email: "dev@cloudstore.com",
+      passwordHash: superPassword,
+      role: Role.SUPER_ADMIN,
+    },
+  });
+
   const userPassword = await bcrypt.hash("user123", 12);
   await prisma.user.upsert({
     where: { email: "user@test.com" },
