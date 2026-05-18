@@ -89,7 +89,7 @@ async function apiRequest<T>(
 export async function getMinAmount(): Promise<number> {
   const result = await apiRequest<NowPaymentsMinAmountResponse>(
     "GET",
-    `/min-amount?currency_from=usd&currency_to=usdttrc20&is_fixed_rate=true`
+    `/min-amount?currency_from=usd&currency_to=usdttrc20`
   );
   return result.min_amount;
 }
@@ -113,7 +113,6 @@ export async function createPayment(
     order_id: orderId,
     order_description: orderDescription,
     ipn_callback_url: CALLBACK_URL,
-    is_fixed_rate: true,
     is_fee_paid_by_user: true,
   };
 
