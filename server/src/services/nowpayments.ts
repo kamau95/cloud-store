@@ -2,7 +2,10 @@ import crypto from "crypto";
 import fetch from "node-fetch";
 
 const API_KEY = process.env.NOWPAYMENTS_API_KEY || "";
-const API_URL = "https://api.nowpayments.io/v1";
+const IS_SANDBOX = process.env.NOWPAYMENTS_SANDBOX === "true";
+const API_URL = IS_SANDBOX
+  ? "https://api-sandbox.nowpayments.io/v1"
+  : "https://api.nowpayments.io/v1";
 const IPN_SECRET = process.env.NOWPAYMENTS_IPN_SECRET || "";
 const CALLBACK_URL =
   process.env.NOWPAYMENTS_CALLBACK_URL ||
@@ -22,6 +25,7 @@ export interface NowPaymentsCreatePaymentRequest {
   ipn_callback_url?: string;
   is_fixed_rate?: boolean;
   is_fee_paid_by_user?: boolean;
+  case?: string;
 }
 
 export interface NowPaymentsPaymentResponse {
@@ -114,6 +118,7 @@ export async function createPayment(
     order_description: orderDescription,
     ipn_callback_url: CALLBACK_URL,
     is_fee_paid_by_user: true,
+    ...(IS_SANDBOX && { case: "success" }),
   };
 
   return apiRequest<NowPaymentsPaymentResponse>("POST", "/payment", body as unknown as Record<string, unknown>);
