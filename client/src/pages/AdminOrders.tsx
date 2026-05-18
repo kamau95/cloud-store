@@ -3,9 +3,28 @@ import { api } from "../api/client";
 import { Order } from "../types";
 import toast from "react-hot-toast";
 
+type Tab = "ALL" | "PENDING" | "PAID" | "DELIVERED" | "CANCELLED";
+
+const TAB_LABELS: Record<Tab, string> = {
+  ALL: "All",
+  PENDING: "Pending",
+  PAID: "Paid",
+  DELIVERED: "Delivered",
+  CANCELLED: "Cancelled",
+};
+
+const TAB_COLORS: Record<Tab, string> = {
+  ALL: "text-gray-300 border-gray-600",
+  PENDING: "text-yellow-400 border-yellow-700",
+  PAID: "text-blue-400 border-blue-700",
+  DELIVERED: "text-green-400 border-green-700",
+  CANCELLED: "text-red-400 border-red-700",
+};
+
 export default function AdminOrders() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
+  const [tab, setTab] = useState<Tab>("PENDING");
 
   const fetchOrders = () => {
     setLoading(true);
@@ -27,18 +46,47 @@ export default function AdminOrders() {
     }
   };
 
+  const counts: Record<Tab, number> = {
+    ALL: orders.length,
+    PENDING: orders.filter((o) => o.status === "PENDING").length,
+    PAID: orders.filter((o) => o.status === "PAID").length,
+    DELIVERED: orders.filter((o) => o.status === "DELIVERED").length,
+    CANCELLED: orders.filter((o) => o.status === "CANCELLED").length,
+  };
+
+  const filtered = tab === "ALL" ? orders : orders.filter((o) => o.status === tab);
+  const tabs: Tab[] = ["PENDING", "PAID", "DELIVERED", "CANCELLED", "ALL"];
+
   return (
     <div className="max-w-5xl mx-auto px-4 py-12">
-      <h1 className="text-3xl font-bold mb-8">Orders</h1>
+      <h1 className="text-3xl font-bold mb-6">Orders</h1>
+
+      <div className="flex gap-1 mb-6 border-b border-gray-800">
+        {tabs.map((t) => (
+          <button
+            key={t}
+            onClick={() => setTab(t)}
+            className={`px-4 py-2.5 text-sm font-medium border-b-2 transition ${
+              tab === t
+                ? TAB_COLORS[t]
+                : "text-gray-500 border-transparent hover:text-gray-300"
+            }`}
+          >
+            {TAB_LABELS[t]}
+            <span className="ml-1.5 text-xs opacity-70">({counts[t]})</span>
+          </button>
+        ))}
+      </div>
+
       {loading ? (
         <div className="flex justify-center py-12">
           <div className="animate-spin h-8 w-8 border-2 border-blue-500 border-t-transparent rounded-full" />
         </div>
-      ) : orders.length === 0 ? (
-        <p className="text-gray-500 text-center py-12">No orders yet</p>
+      ) : filtered.length === 0 ? (
+        <p className="text-gray-500 text-center py-12">No {tab === "ALL" ? "" : TAB_LABELS[tab].toLowerCase()} orders.</p>
       ) : (
         <div className="space-y-3">
-          {orders.map((order) => (
+          {filtered.map((order) => (
             <div key={order.id} className="border border-gray-800 rounded-xl p-4">
               <div className="flex items-center justify-between mb-2">
                 <div>
