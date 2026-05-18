@@ -9,7 +9,7 @@ export async function handleNowPaymentsWebhook(
   res: Response
 ): Promise<void> {
   const event = req.body as Record<string, unknown>;
-  const paymentId = event.payment_id as string | undefined;
+  const paymentId = event.payment_id != null ? String(event.payment_id) : undefined;
   const paymentStatus = event.payment_status as string | undefined;
 
   if (!paymentId) {
