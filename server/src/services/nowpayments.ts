@@ -41,19 +41,10 @@ export interface NowPaymentsPaymentResponse {
   expiration_estimate_date?: string;
 }
 
-export interface NowPaymentsIPNPayload {
-  payment_id?: string;
-  payment_status?: string;
-  pay_address?: string;
-  pay_amount?: number;
-  pay_currency?: string;
-  actually_paid?: number;
-  price_amount?: number;
-  price_currency?: string;
-  order_id?: string;
-  order_description?: string;
-  purchase_id?: string;
-  [key: string]: unknown;
+export interface NowPaymentsMinAmountResponse {
+  currency_from: string;
+  currency_to: string;
+  min_amount: number;
 }
 
 export function calculateFees(productPriceUsd: number): {
@@ -73,11 +64,48 @@ export function calculateFees(productPriceUsd: number): {
   };
 }
 
+async function apiRequest<T>(
+  method: string,
+  path: string,
+  body?: Record<string, unknown>
+): Promise<T> {
+  const res = await fetch(`${API_URL}${path}`, {
+    method,
+    headers: {
+      "x-api-key": API_KEY,
+      "Content-Type": "application/json",
+    },
+    body: body ? JSON.stringify(body) : undefined,
+  });
+
+  if (!res.ok) {
+    const err = await res.text();
+    throw new Error(`NOWPayments error (${res.status}): ${err}`);
+  }
+
+  return (await res.json()) as T;
+}
+
+export async function getMinAmount(): Promise<number> {
+  const result = await apiRequest<NowPaymentsMinAmountResponse>(
+    "GET",
+    `/min-amount?currency_from=usd&currency_to=usdttrc20&is_fixed_rate=true`
+  );
+  return result.min_amount;
+}
+
 export async function createPayment(
   amountUsd: number,
   orderId: string,
   orderDescription?: string
 ): Promise<NowPaymentsPaymentResponse> {
+  const minAmount = await getMinAmount();
+  if (amountUsd < minAmount) {
+    throw new Error(
+      `Amount $${amountUsd} is below the minimum of $${minAmount.toFixed(2)} for USDT TRC-20`
+    );
+  }
+
   const body: NowPaymentsCreatePaymentRequest = {
     price_amount: amountUsd,
     price_currency: "usd",
@@ -89,36 +117,16 @@ export async function createPayment(
     is_fee_paid_by_user: true,
   };
 
-  const res = await fetch(`${API_URL}/payment`, {
-    method: "POST",
-    headers: {
-      "x-api-key": API_KEY,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(body),
-  });
-
-  if (!res.ok) {
-    const err = await res.text();
-    throw new Error(`NOWPayments error (${res.status}): ${err}`);
-  }
-
-  return (await res.json()) as NowPaymentsPaymentResponse;
+  return apiRequest<NowPaymentsPaymentResponse>("POST", "/payment", body as unknown as Record<string, unknown>);
 }
 
 export async function getPaymentStatus(
   paymentId: string
 ): Promise<NowPaymentsPaymentResponse> {
-  const res = await fetch(`${API_URL}/payment/${paymentId}`, {
-    headers: { "x-api-key": API_KEY },
-  });
-
-  if (!res.ok) {
-    const err = await res.text();
-    throw new Error(`NOWPayments error (${res.status}): ${err}`);
-  }
-
-  return (await res.json()) as NowPaymentsPaymentResponse;
+  return apiRequest<NowPaymentsPaymentResponse>(
+    "GET",
+    `/payment/${paymentId}`
+  );
 }
 
 export function verifyIPN(
