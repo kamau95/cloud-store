@@ -78,6 +78,23 @@ export async function deliverOrder(req: AuthRequest, res: Response): Promise<voi
   res.json(updated);
 }
 
+export async function cancelOrder(req: AuthRequest, res: Response): Promise<void> {
+  const order = await prisma.order.findUnique({ where: { id: req.params.id } });
+  if (!order) {
+    res.status(404).json({ error: "Order not found" });
+    return;
+  }
+  if (order.status !== "PENDING") {
+    res.status(400).json({ error: "Only pending orders can be cancelled" });
+    return;
+  }
+  const updated = await prisma.order.update({
+    where: { id: order.id },
+    data: { status: "CANCELLED" },
+  });
+  res.json(updated);
+}
+
 export async function uploadAccounts(req: AuthRequest, res: Response): Promise<void> {
   const { accounts } = req.body;
   let uploaded = 0;

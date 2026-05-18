@@ -36,6 +36,17 @@ export default function AdminOrders() {
 
   useEffect(() => { fetchOrders(); }, []);
 
+  const handleCancel = async (id: string) => {
+    if (!confirm("Cancel this order?")) return;
+    try {
+      await api.patch(`/admin/orders/${id}/cancel`);
+      toast.success("Order cancelled");
+      fetchOrders();
+    } catch (err) {
+      toast.error((err as Error).message);
+    }
+  };
+
   const handleDeliver = async (id: string) => {
     try {
       await api.patch(`/admin/orders/${id}/deliver`);
@@ -103,12 +114,20 @@ export default function AdminOrders() {
                     {order.status}
                   </span>
                   {order.status === "PENDING" && (
-                    <button
-                      onClick={() => handleDeliver(order.id)}
-                      className="text-xs bg-green-600 hover:bg-green-500 px-3 py-1 rounded transition"
-                    >
-                      Deliver
-                    </button>
+                    <>
+                      <button
+                        onClick={() => handleDeliver(order.id)}
+                        className="text-xs bg-green-600 hover:bg-green-500 px-3 py-1 rounded transition"
+                      >
+                        Deliver
+                      </button>
+                      <button
+                        onClick={() => handleCancel(order.id)}
+                        className="text-xs bg-red-600 hover:bg-red-500 px-3 py-1 rounded transition"
+                      >
+                        Cancel
+                      </button>
+                    </>
                   )}
                 </div>
               </div>
