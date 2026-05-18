@@ -36,6 +36,17 @@ export default function AdminOrders() {
 
   useEffect(() => { fetchOrders(); }, []);
 
+  const handleDelete = async (id: string) => {
+    if (!confirm("Delete this cancelled order permanently?")) return;
+    try {
+      await api.delete(`/admin/orders/${id}`);
+      toast.success("Order deleted");
+      fetchOrders();
+    } catch (err) {
+      toast.error((err as Error).message);
+    }
+  };
+
   const handleCancel = async (id: string) => {
     if (!confirm("Cancel this order?")) return;
     try {
@@ -128,6 +139,14 @@ export default function AdminOrders() {
                         Cancel
                       </button>
                     </>
+                  )}
+                  {order.status === "CANCELLED" && (
+                    <button
+                      onClick={() => handleDelete(order.id)}
+                      className="text-xs bg-red-600 hover:bg-red-500 px-3 py-1 rounded transition"
+                    >
+                      Delete
+                    </button>
                   )}
                 </div>
               </div>

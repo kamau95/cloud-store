@@ -11,6 +11,7 @@ router.get("/products", admin.listAllProducts);
 router.get("/orders", admin.getAllOrders);
 router.patch("/orders/:id/deliver", admin.deliverOrder);
 router.patch("/orders/:id/cancel", admin.cancelOrder);
+router.delete("/orders/:id", admin.deleteOrder);
 router.post("/accounts/upload", validate(admin.uploadAccountsSchema), admin.uploadAccounts);
 router.get("/accounts", admin.listAccountPool);
 

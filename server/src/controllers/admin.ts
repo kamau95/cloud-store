@@ -95,6 +95,20 @@ export async function cancelOrder(req: AuthRequest, res: Response): Promise<void
   res.json(updated);
 }
 
+export async function deleteOrder(req: AuthRequest, res: Response): Promise<void> {
+  const order = await prisma.order.findUnique({ where: { id: req.params.id } });
+  if (!order) {
+    res.status(404).json({ error: "Order not found" });
+    return;
+  }
+  if (order.status !== "CANCELLED") {
+    res.status(400).json({ error: "Only cancelled orders can be deleted" });
+    return;
+  }
+  await prisma.order.delete({ where: { id: order.id } });
+  res.status(204).send();
+}
+
 export async function uploadAccounts(req: AuthRequest, res: Response): Promise<void> {
   const { accounts } = req.body;
   let uploaded = 0;
