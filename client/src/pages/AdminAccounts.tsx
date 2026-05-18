@@ -10,10 +10,34 @@ interface AccountEntry {
   claimedAt: string | null;
 }
 
+interface AccountForm {
+  provider: string;
+  email: string;
+  password: string;
+  accessKey: string;
+  secretKey: string;
+  region: string;
+}
+
+const emptyForm: AccountForm = {
+  provider: "AWS",
+  email: "",
+  password: "",
+  accessKey: "",
+  secretKey: "",
+  region: "",
+};
+
+type UploadMode = "single" | "bulk";
+
 export default function AdminAccounts() {
   const [accounts, setAccounts] = useState<AccountEntry[]>([]);
   const [loading, setLoading] = useState(true);
-  const [csvText, setCsvText] = useState("");
+  const [mode, setMode] = useState<UploadMode>("single");
+  const [form, setForm] = useState<AccountForm>(emptyForm);
+  const [submitting, setSubmitting] = useState(false);
+  const [bulkJson, setBulkJson] = useState("");
+  const [search, setSearch] = useState("");
 
   const fetchAccounts = () => {
     setLoading(true);
@@ -25,72 +49,232 @@ export default function AdminAccounts() {
 
   useEffect(() => { fetchAccounts(); }, []);
 
-  const handleUpload = async (e: FormEvent) => {
+  const handleSingleSubmit = async (e: FormEvent) => {
     e.preventDefault();
+    if (!form.email || !form.password) {
+      toast.error("Email and password are required");
+      return;
+    }
+    setSubmitting(true);
     try {
-      const lines = csvText.trim().split("\n");
-      if (lines.length < 2) {
-        toast.error("CSV must have a header row and at least one data row");
-        return;
-      }
-
-      const headers = lines[0].split(",").map((h) => h.trim());
-      const accounts = lines.slice(1).map((line) => {
-        const values = line.split(",").map((v) => v.trim());
-        const obj: Record<string, string> = {};
-        headers.forEach((h, i) => { obj[h] = values[i] || ""; });
-        return obj;
-      });
-
-      const data = await api.post("/admin/accounts/upload", { accounts });
-      toast.success(`Uploaded ${(data as { uploaded: number }).uploaded} accounts`);
-      setCsvText("");
+      const payload = {
+        accounts: [{
+          provider: form.provider,
+          email: form.email,
+          password: form.password,
+          ...(form.accessKey && { accessKey: form.accessKey }),
+          ...(form.secretKey && { secretKey: form.secretKey }),
+          ...(form.region && { region: form.region }),
+          specs: {},
+        }],
+      };
+      const data = await api.post("/admin/accounts/upload", payload);
+      toast.success(`Uploaded ${(data as { uploaded: number }).uploaded} account`);
+      setForm(emptyForm);
       fetchAccounts();
     } catch (err) {
       toast.error((err as Error).message);
+    } finally {
+      setSubmitting(false);
     }
   };
+
+  const handleBulkSubmit = async (e: FormEvent) => {
+    e.preventDefault();
+    let accounts: Record<string, string>[];
+    try {
+      accounts = JSON.parse(bulkJson);
+      if (!Array.isArray(accounts) || accounts.length === 0) {
+        toast.error("Must be a non-empty JSON array");
+        return;
+      }
+    } catch {
+      toast.error("Invalid JSON format");
+      return;
+    }
+    setSubmitting(true);
+    try {
+      const data = await api.post("/admin/accounts/upload", { accounts });
+      toast.success(`Uploaded ${(data as { uploaded: number }).uploaded} accounts`);
+      setBulkJson("");
+      fetchAccounts();
+    } catch (err) {
+      toast.error((err as Error).message);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const filtered = search
+    ? accounts.filter((a) =>
+        a.email.toLowerCase().includes(search.toLowerCase()) ||
+        a.provider.toLowerCase().includes(search.toLowerCase())
+      )
+    : accounts;
 
   return (
     <div className="max-w-5xl mx-auto px-4 py-12">
       <h1 className="text-3xl font-bold mb-8">Account Inventory</h1>
 
       <div className="border border-gray-800 rounded-xl p-6 mb-8">
-        <h2 className="text-lg font-semibold mb-4">Upload Accounts (CSV)</h2>
-        <form onSubmit={handleUpload}>
-          <div className="text-xs text-gray-500 mb-3 font-mono">
-            Header: provider,email,password,accessKey,secretKey,region,specs
+        <div className="flex items-center gap-4 mb-6">
+          <h2 className="text-lg font-semibold">Add Accounts</h2>
+          <div className="flex gap-1 bg-gray-800 rounded-lg p-0.5">
+            <button
+              onClick={() => setMode("single")}
+              className={`px-3 py-1.5 text-xs rounded-md transition ${
+                mode === "single" ? "bg-blue-600 text-white" : "text-gray-400 hover:text-white"
+              }`}
+            >
+              Single
+            </button>
+            <button
+              onClick={() => setMode("bulk")}
+              className={`px-3 py-1.5 text-xs rounded-md transition ${
+                mode === "bulk" ? "bg-blue-600 text-white" : "text-gray-400 hover:text-white"
+              }`}
+            >
+              Bulk
+            </button>
           </div>
-          <textarea
-            value={csvText}
-            onChange={(e) => setCsvText(e.target.value)}
-            className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 text-sm font-mono mb-4"
-            rows={6}
-            placeholder={`provider,email,password,accessKey,secretKey,region\nAWS,aws@example.com,pass123,AKIA...,wJalr...,us-east-1`}
-          />
-          <button type="submit" className="bg-blue-600 hover:bg-blue-500 px-6 py-2 rounded-lg text-sm font-medium transition">
-            Upload to Vault
-          </button>
-        </form>
+        </div>
+
+        {mode === "single" ? (
+          <form onSubmit={handleSingleSubmit} className="space-y-4">
+            <div className="grid md:grid-cols-3 gap-4">
+              <div>
+                <label className="block text-xs text-gray-400 mb-1">Provider</label>
+                <select
+                  value={form.provider}
+                  onChange={(e) => setForm({ ...form, provider: e.target.value })}
+                  className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm"
+                >
+                  <option value="AWS">AWS</option>
+                  <option value="GCP">GCP</option>
+                  <option value="AZURE">Azure</option>
+                  <option value="OTHER">Other</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs text-gray-400 mb-1">Email</label>
+                <input
+                  type="email"
+                  value={form.email}
+                  onChange={(e) => setForm({ ...form, email: e.target.value })}
+                  className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-gray-400 mb-1">Password</label>
+                <input
+                  type="text"
+                  value={form.password}
+                  onChange={(e) => setForm({ ...form, password: e.target.value })}
+                  className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-gray-400 mb-1">Access Key</label>
+                <input
+                  value={form.accessKey}
+                  onChange={(e) => setForm({ ...form, accessKey: e.target.value })}
+                  className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm"
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-gray-400 mb-1">Secret Key</label>
+                <input
+                  value={form.secretKey}
+                  onChange={(e) => setForm({ ...form, secretKey: e.target.value })}
+                  className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm"
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-gray-400 mb-1">Region</label>
+                <input
+                  value={form.region}
+                  onChange={(e) => setForm({ ...form, region: e.target.value })}
+                  className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm"
+                />
+              </div>
+            </div>
+            <button
+              type="submit"
+              disabled={submitting}
+              className="bg-blue-600 hover:bg-blue-500 disabled:opacity-50 px-6 py-2 rounded-lg text-sm font-medium transition"
+            >
+              {submitting ? "Uploading..." : "Add Account"}
+            </button>
+          </form>
+        ) : (
+          <form onSubmit={handleBulkSubmit} className="space-y-4">
+            <div className="text-xs text-gray-500 mb-2">
+              Paste a JSON array of accounts:
+            </div>
+            <textarea
+              value={bulkJson}
+              onChange={(e) => setBulkJson(e.target.value)}
+              className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 text-sm font-mono mb-2"
+              rows={8}
+              placeholder={`[
+  {
+    "provider": "AWS",
+    "email": "aws-dev-3@example.com",
+    "password": "pass123",
+    "accessKey": "AKIA...",
+    "secretKey": "wJalr...",
+    "region": "us-east-1"
+  }
+]`}
+            />
+            <button
+              type="submit"
+              disabled={submitting}
+              className="bg-blue-600 hover:bg-blue-500 disabled:opacity-50 px-6 py-2 rounded-lg text-sm font-medium transition"
+            >
+              {submitting ? "Uploading..." : "Upload All"}
+            </button>
+          </form>
+        )}
       </div>
 
-      <h2 className="text-xl font-semibold mb-4">Stored Accounts ({accounts.length})</h2>
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-xl font-semibold">Stored ({accounts.length})</h2>
+        <input
+          type="text"
+          placeholder="Search by email or provider..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-1.5 text-sm w-64"
+        />
+      </div>
+
       {loading ? (
         <div className="flex justify-center py-12">
           <div className="animate-spin h-8 w-8 border-2 border-blue-500 border-t-transparent rounded-full" />
         </div>
-      ) : accounts.length === 0 ? (
-        <p className="text-gray-500">No accounts in vault. Upload some above.</p>
+      ) : filtered.length === 0 ? (
+        <p className="text-gray-500 text-center py-12">
+          {search ? "No matching accounts." : "No accounts in vault. Add one above."}
+        </p>
       ) : (
         <div className="space-y-2">
-          {accounts.map((acc) => (
-            <div key={acc.path} className="border border-gray-800 rounded-lg px-4 py-3 flex items-center justify-between text-sm">
-              <div>
-                <span className="text-gray-400 font-mono">{acc.path}</span>
-                <span className="ml-3">{acc.provider}</span>
-                <span className="ml-3 text-gray-500">{acc.email}</span>
+          {filtered.map((acc) => (
+            <div key={acc.path} className="border border-gray-800 rounded-lg px-4 py-3 flex items-center justify-between text-sm hover:border-gray-700 transition">
+              <div className="flex items-center gap-4">
+                <span className={`text-xs font-medium px-2 py-0.5 rounded ${
+                  acc.provider === "AWS" ? "bg-orange-900 text-orange-300" :
+                  acc.provider === "GCP" ? "bg-blue-900 text-blue-300" :
+                  acc.provider === "AZURE" ? "bg-indigo-900 text-indigo-300" :
+                  "bg-gray-700 text-gray-300"
+                }`}>
+                  {acc.provider}
+                </span>
+                <span className="text-gray-300">{acc.email}</span>
               </div>
-              <span className={acc.claimed ? "text-amber-400" : "text-green-400"}>
+              <span className={`text-xs font-medium ${acc.claimed ? "text-amber-400" : "text-green-400"}`}>
                 {acc.claimed ? `Claimed ${acc.claimedAt ? new Date(acc.claimedAt).toLocaleDateString() : ""}` : "Available"}
               </span>
             </div>
