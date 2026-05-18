@@ -2,7 +2,7 @@ import { Response } from "express";
 import { PrismaClient } from "@prisma/client";
 import { z } from "zod";
 import { AuthRequest } from "../types";
-import * as gatewaycrypto from "../services/gatewaycrypto";
+import * as nowpayments from "../services/nowpayments";
 import * as vault from "../services/vault";
 
 const prisma = new PrismaClient();
@@ -20,7 +20,6 @@ export async function checkout(req: AuthRequest, res: Response): Promise<void> {
     res.status(404).json({ error: "Product not found or unavailable" });
     return;
   }
-
   if (product.stock < 1) {
     res.status(400).json({ error: "Out of stock" });
     return;
@@ -37,24 +36,28 @@ export async function checkout(req: AuthRequest, res: Response): Promise<void> {
 
   try {
     const { paymentAmount, adminFee, gatewayFee, sellerAmount } =
-      gatewaycrypto.calculateFees(product.priceUsd);
+      nowpayments.calculateFees(product.priceUsd);
 
-    const result = await gatewaycrypto.createPayment(
-      "USDT",
+    const result = await nowpayments.createPayment(
       paymentAmount,
-      order.id
+      order.id,
+      product.name
     );
+
+    const expiresAt = result.expiration_estimate_date
+      ? new Date(result.expiration_estimate_date)
+      : new Date(Date.now() + 30 * 60 * 1000);
 
     await prisma.order.update({
       where: { id: order.id },
       data: {
-        paymentProvider: "GATEWAYCRYPTO",
+        paymentProvider: "NOWPAYMENTS",
         paymentChargeId: result.payment_id,
-        cryptoAddress: result.wallet_address,
-        cryptoAmount: parseFloat(result.amount),
-        cryptoCurrency: result.currency,
+        cryptoAddress: result.pay_address,
+        cryptoAmount: result.pay_amount,
+        cryptoCurrency: result.pay_currency.toUpperCase(),
         cryptoNetwork: "TRC-20",
-        cryptoExpiresAt: new Date(result.expires_at),
+        cryptoExpiresAt: expiresAt,
         gatewayFee,
         adminFee,
         sellerAmount,
@@ -64,13 +67,13 @@ export async function checkout(req: AuthRequest, res: Response): Promise<void> {
     res.json({
       orderId: order.id,
       paymentId: result.payment_id,
-      walletAddress: result.wallet_address,
-      amount: parseFloat(result.amount),
+      walletAddress: result.pay_address,
+      amount: result.pay_amount,
       basePrice: product.priceUsd,
-      currency: result.currency,
+      currency: result.pay_currency.toUpperCase(),
       network: "TRC-20",
-      expiresAt: result.expires_at,
-      provider: "gatewaycrypto",
+      expiresAt: expiresAt.toISOString(),
+      provider: "nowpayments",
       feeBreakdown: {
         gatewayFee,
         adminFee,
@@ -82,7 +85,6 @@ export async function checkout(req: AuthRequest, res: Response): Promise<void> {
       where: { id: order.id },
       data: { status: "CANCELLED" },
     });
-
     res.status(502).json({
       error: "Payment provider failed",
       details: (err as Error).message,
@@ -96,34 +98,26 @@ export async function getMyOrders(req: AuthRequest, res: Response): Promise<void
     include: { product: true },
     orderBy: { createdAt: "desc" },
   });
-
   res.json(orders);
 }
 
-export async function getCheckoutDetails(
-  req: AuthRequest,
-  res: Response
-): Promise<void> {
+export async function getCheckoutDetails(req: AuthRequest, res: Response): Promise<void> {
   const order = await prisma.order.findUnique({
     where: { id: req.params.id },
     include: { product: true },
   });
-
   if (!order) {
     res.status(404).json({ error: "Order not found" });
     return;
   }
-
   if (order.userId !== req.user!.userId && req.user!.role !== "ADMIN") {
     res.status(403).json({ error: "Not your order" });
     return;
   }
-
-  if (order.paymentProvider !== "GATEWAYCRYPTO") {
-    res.status(400).json({ error: "Not a GatewayCrypto order" });
+  if (order.paymentProvider !== "NOWPAYMENTS") {
+    res.status(400).json({ error: "Not a NOWPayments order" });
     return;
   }
-
   res.json({
     orderId: order.id,
     paymentId: order.paymentChargeId,
@@ -132,35 +126,24 @@ export async function getCheckoutDetails(
     currency: order.cryptoCurrency || "USDT",
     network: order.cryptoNetwork || "TRC-20",
     expiresAt: order.cryptoExpiresAt?.toISOString(),
-    provider: "gatewaycrypto",
+    provider: "nowpayments",
     status: order.status,
   });
 }
 
-export async function getOrderPaymentStatus(
-  req: AuthRequest,
-  res: Response
-): Promise<void> {
+export async function getOrderPaymentStatus(req: AuthRequest, res: Response): Promise<void> {
   const order = await prisma.order.findUnique({
     where: { id: req.params.id },
-    select: {
-      id: true,
-      status: true,
-      paymentProvider: true,
-      credentialId: true,
-    },
+    select: { id: true, status: true, paymentProvider: true, credentialId: true },
   });
-
   if (!order) {
     res.status(404).json({ error: "Order not found" });
     return;
   }
-
-  if (order.paymentProvider !== "GATEWAYCRYPTO") {
-    res.status(400).json({ error: "Not a GatewayCrypto order" });
+  if (order.paymentProvider !== "NOWPAYMENTS") {
+    res.status(400).json({ error: "Not a NOWPayments order" });
     return;
   }
-
   res.json({
     orderId: order.id,
     status: order.status,
@@ -170,36 +153,28 @@ export async function getOrderPaymentStatus(
 }
 
 export async function getOrderCredentials(req: AuthRequest, res: Response): Promise<void> {
-  const order = await prisma.order.findUnique({
-    where: { id: req.params.id },
-  });
-
+  const order = await prisma.order.findUnique({ where: { id: req.params.id } });
   if (!order) {
     res.status(404).json({ error: "Order not found" });
     return;
   }
-
   if (order.userId !== req.user!.userId && req.user!.role !== "ADMIN") {
     res.status(403).json({ error: "Not your order" });
     return;
   }
-
   if (order.status !== "DELIVERED") {
     res.status(400).json({ error: "Order not yet delivered" });
     return;
   }
-
   if (!order.credentialId) {
     res.status(404).json({ error: "No credentials found for this order" });
     return;
   }
-
   const creds = await vault.getCredential(order.credentialId);
   if (!creds) {
     res.status(404).json({ error: "Credentials not found in vault" });
     return;
   }
-
   res.json({
     ...creds,
     warning: "These credentials are shown once. Save them securely.",

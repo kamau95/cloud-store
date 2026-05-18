@@ -33,6 +33,7 @@ enum PaymentProvider {
   BTCPAY
   PAYMENTO
   GATEWAYCRYPTO
+  NOWPAYMENTS
 }
 
 model User {

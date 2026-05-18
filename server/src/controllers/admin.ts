@@ -106,7 +106,7 @@ export async function getFeeSummary(
   res: Response
 ): Promise<void> {
   const orders = await prisma.order.findMany({
-    where: { paymentProvider: "GATEWAYCRYPTO", status: "DELIVERED" },
+    where: { paymentProvider: "NOWPAYMENTS", status: "DELIVERED" },
     select: { amountUsd: true, adminFee: true, gatewayFee: true, sellerAmount: true },
   });
 

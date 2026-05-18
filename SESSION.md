@@ -1,87 +1,80 @@
-# Session 6 — GatewayCrypto integration, admin tiers, fee system
+# Cloud Store — Session Context
 
-## What was done
+## Project
+Cloud store selling cloud service accounts (AWS, GCP, Azure credentials). Customers pay with USDT TRC-20 from exchange accounts (Binance, Coinbase, Kraken, Bybit).
 
-### Payment gateway switch
-- Replaced Paymento with **GatewayCrypto** as the sole payment gateway
-- Created `server/src/services/gatewaycrypto.ts` — calls `POST /v1/payments` on GatewayCrypto API
-  - `createPayment(currency, network, amount, orderId)` — generates unique deposit address
-  - `getPaymentStatus(paymentId)` — server-side verification
-  - `calculateFees(price)` — computes admin fee, gateway fee, seller amount
+## Payment Gateway: NOWPayments
+- **API base**: `https://api.nowpayments.io/v1`
+- **Auth**: API key (`x-api-key` header)
+- **Fee**: 0.5% service fee (same-currency) + network fee (paid by customer via `is_fee_paid_by_user=true`)
+- **Create payment**: `POST /v1/payment` — returns `pay_address`, `pay_amount`, `payment_id`, `expiration_estimate_date`
+- **Get status**: `GET /v1/payment/{payment_id}`
+- **IPN (webhook)**: `POST` to configured URL with HMAC-SHA512 signature in `x-nowpayments-sig` header
+- **IPN verification**: Sort body keys alphabetically → `JSON.stringify` → HMAC-SHA512 with IPN secret → compare to `x-nowpayments-sig`
+- **Pay currency**: `usdttrc20` (USDT on TRON TRC-20 network)
+- **Checkout flow**: Create order → create payment → receive address → customer sends USDT → IPN callback → auto-deliver credential
+- **Deployed URL**: `https://cloud-store-ykd3.onrender.com`
 
-### Fee structure
-- Customer pays the **listed price** (no visible markup)
-- **Admin fee**: 5% (configurable via `GATEWAYCRYPTO_ADMIN_FEE_PERCENT`)
-- **Gateway fee**: assumed 1% (configurable via `GATEWAYCRYPTO_ASSUMED_FEE`)
-- **Seller amount**: the rest (~94%) — tracked per-order
-- All fees tracked in DB: `adminFee`, `gatewayFee`, `sellerAmount` on Order model
+## Fee Structure
+- **Admin fee**: 5% (`NOWPAYMENTS_ADMIN_FEE_PERCENT=0.05`)
+- **Gateway fee**: 0.5% (`ASSUMED_FEE=0.005`)
+- **Seller payout**: ~94.5% of product price (tracked per-order as `sellerAmount`)
+- Customer pays listed price — no visible markup
 
-### Admin role split (two-tier admin)
-- Added `SUPER_ADMIN` role to `Role` enum
-- **SUPER_ADMIN** (`dev@cloudstore.com` / `super123`):
-  - Sees fee dashboard (admin fees, seller payouts, gateway fees)
-  - Can view all users
-  - Everything ADMIN can do
-- **ADMIN** (`admin@cloudstore.com` / `admin123`):
-  - Manage products, orders, accounts
-  - Cannot see fees, users, or system-level data
-- Backend: `requireSuperAdmin` middleware on fee/user routes
-- Frontend: role-based rendering on AdminDashboard + Layout nav
+## Admin Tiers
+| Role | Credentials | Permissions |
+|---|---|---|
+| `SUPER_ADMIN` | `dev@cloudstore.com` / `super123` | Products, orders, accounts + fee summary + user list |
+| `ADMIN` | `admin@cloudstore.com` / `admin123` | Products, orders, accounts only |
+| `USER` | `user@test.com` / `user123` | Browse, purchase |
 
-### Checkout page (new)
-- `client/src/pages/Checkout.tsx` — payment address display page
-- Shows: amount, wallet address (with copy), network warning (TRC-20 ONLY)
-- Exchange withdrawal guide (expandable: Binance/Coinbase/Kraken/Bybit)
-- Pre-payment checklist (5 checkboxes before monitoring starts)
-- Expiration timer (auto-refresh quote if expired)
-- Live polling every 10s via `GET /orders/:id/status`
-- Success screen with link to credentials
+**Enforcement**: `requireAdmin` (ADMIN+SUPER_ADMIN), `requireSuperAdmin` (SUPER_ADMIN only) middleware in `server/src/middleware/auth.ts`. Routes split in `server/src/routes/admin.ts`.
 
-### Backend changes
-- `server/src/middleware/gatewaycrypto-webhook.ts` — HMAC-SHA256 verification via `X-Signature`
-- Webhook handler in `controllers/webhooks.ts` — verifies payment status server-side then calls `processPayment`
-- Added `GET /orders/checkout/:id` — loads checkout details from stored crypto fields
-- Added `GET /orders/:id/status` — polling endpoint for checkout page
-- Added `GET /admin/fees` — super-admin-only fee summary
-- `GET /admin/users` — super-admin-only user list
-
-### Database migrations (3 new)
-1. `20260516201548_add_gatewaycrypto` — adds `GATEWAYCRYPTO` to `PaymentProvider` enum
-2. `20260516201820_add_crypto_payment_fields` — adds `cryptoAddress`, `cryptoAmount`, `cryptoCurrency`, `cryptoNetwork`, `cryptoExpiresAt` to Order
-3. `20260516202717_add_fee_fields` — adds `adminFee`, `gatewayFee` to Order
-4. `20260516203807_add_seller_amount` — adds `sellerAmount` to Order
-5. `20260516204500_add_super_admin_role` — adds `SUPER_ADMIN` to `Role` enum
-
-### Frontend changes
-- `client/src/pages/Checkout.tsx` — new page (address + warnings + guide + polling)
-- `client/src/pages/ProductDetail.tsx` — navigates to `/checkout/:id` instead of opening Paymento URL
-- `client/src/pages/AdminDashboard.tsx` — role-based: super admin sees fee cards, regular admin doesn't
-- `client/src/components/Layout.tsx` — admin nav link visible to both admin roles
-- `client/src/types/index.ts` — updated for `SUPER_ADMIN` role, new `CheckoutResponse` shape
-
-### Key config (`.env.example`)
-```
-GATEWAYCRYPTO_API_KEY=...
-GATEWAYCRYPTO_WEBHOOK_SECRET=...
-GATEWAYCRYPTO_CALLBACK_URL=...
-GATEWAYCRYPTO_ASSUMED_FEE=0.01
-GATEWAYCRYPTO_ADMIN_FEE_PERCENT=0.05
-```
-
-## Key files
-| Path | Role |
+## Key Files
+| File | Purpose |
 |---|---|
-| `server/src/services/gatewaycrypto.ts` | GatewayCrypto API wrapper + fee calculation |
-| `server/src/middleware/gatewaycrypto-webhook.ts` | Webhook HMAC signature verification |
-| `server/src/controllers/webhooks.ts` | Webhook handler + processPayment |
-| `server/src/controllers/orders.ts` | Checkout flow (GatewayCrypto), payment status, fee breakdown |
-| `server/src/routes/admin.ts` | Split routes: admin vs super-admin endpoints |
-| `client/src/pages/Checkout.tsx` | Checkout page with address, warnings, exchange guide, polling |
+| `server/src/services/nowpayments.ts` | API client: `createPayment()`, `getPaymentStatus()`, `verifyIPN()`, `calculateFees()` |
+| `server/src/routes/webhooks.ts` | HMAC-SHA512 IPN verification middleware + NOWPayments webhook route |
+| `server/src/controllers/webhooks.ts` | Webhook handler — verifies payment, calls `processPayment` |
+| `server/src/controllers/orders.ts` | Checkout flow, checkout details, payment status polling |
+| `server/src/routes/admin.ts` | Route-level admin/super-admin permission split |
+| `client/src/pages/Checkout.tsx` | Checkout page — address display, exchange guide, pre-payment checklist, live polling |
+| `client/src/pages/AdminDashboard.tsx` | Role-based rendering — super-admin sees fee cards |
+| `server/prisma/schema.prisma` | `Role` enum (USER/ADMIN/SUPER_ADMIN), `PaymentProvider` enum (NOWPAYMENTS), crypto+fee fields on Order |
 
-## To do next
-1. Sign up for GatewayCrypto, get API key, set env vars
-2. Add fee card as payout wallet in GatewayCrypto dashboard
-3. Set webhook route (`/api/orders/webhook/gatewaycrypto`) as callback in GC
-4. Deploy to Render — run `npx prisma migrate deploy` for 5 new migrations
-5. Test checkout flow end-to-end
-6. If GatewayCrypto webhook signature format differs from assumed `X-Signature` HMAC-SHA256, adjust `middleware/gatewaycrypto-webhook.ts`
+## DB Migrations Applied (6)
+1. `add_gatewaycrypto` — `GATEWAYCRYPTO` in `PaymentProvider` enum (legacy, replaced)
+2. `add_crypto_payment_fields` — `cryptoAddress`, `cryptoAmount`, `cryptoCurrency`, `cryptoNetwork`, `cryptoExpiresAt`
+3. `add_fee_fields` — `adminFee`, `gatewayFee`
+4. `add_seller_amount` — `sellerAmount`
+5. `add_super_admin_role` — `SUPER_ADMIN` in `Role` enum
+6. `add_nowpayments` — `NOWPAYMENTS` in `PaymentProvider` enum
+
+## Environment Variables (must be set on deploy)
+| Variable | Value |
+|---|---|
+| `DATABASE_URL` | Render PostgreSQL connection string |
+| `JWT_SECRET` | Strong random secret |
+| `NOWPAYMENTS_API_KEY` | API key from NOWPayments dashboard |
+| `NOWPAYMENTS_IPN_SECRET` | IPN secret key from NOWPayments dashboard (save on creation) |
+| `NOWPAYMENTS_CALLBACK_URL` | `https://cloud-store-ykd3.onrender.com/api/orders/webhook/nowpayments` |
+| `NOWPAYMENTS_ADMIN_FEE_PERCENT` | `0.05` |
+| `APP_URL` | `https://cloud-store-ykd3.onrender.com` |
+| `FRONTEND_URL` | `https://cloud-store-ykd3.onrender.com` |
+
+## Current Status
+- ✅ NOWPayments service layer implemented (`server/src/services/nowpayments.ts`)
+- ✅ Migration applied — `NOWPAYMENTS` added to `PaymentProvider` enum
+- ✅ Code pushed to GitHub (`main` branch)
+- ✅ Deployed on Render (Dockerfile-based, single service)
+- ✅ 6 migrations applied on deploy via `npx prisma migrate deploy`
+- ⏳ **Needs**: Register on NOWPayments → generate API key + IPN secret → set env vars on Render
+- ⏳ **Needs**: Set payout wallet in NOWPayments dashboard (USDT TRC-20 address)
+
+## How to Resume
+1. Register at [NOWPayments.io](https://nowpayments.io) → Dashboard → Settings → API keys → generate API key + IPN secret
+2. Set payout wallet in Dashboard → Settings → Payout wallets (USDT TRC-20 address)
+3. Set env vars on Render: `NOWPAYMENTS_API_KEY`, `NOWPAYMENTS_IPN_SECRET`, `NOWPAYMENTS_CALLBACK_URL`
+4. Redeploy on Render — migrations auto-apply on startup
+5. Test checkout: log in → browse product → click "Buy Now" → see payment address → send USDT TRC-20
+6. Verify webhook triggers credential delivery after payment confirmation

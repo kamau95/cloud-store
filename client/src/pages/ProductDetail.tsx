@@ -92,7 +92,7 @@ export default function ProductDetail() {
               {buying ? "Processing..." : "Buy Now"}
             </button>
             <div className="text-xs text-gray-500 text-center">
-              Pay with USDT (TRC-20) via GatewayCrypto
+              Pay with USDT (TRC-20) via NOWPayments
             </div>
           </div>
         </div>

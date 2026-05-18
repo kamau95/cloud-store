@@ -29,7 +29,7 @@ export interface Order {
   productId: string;
   product: Product;
   status: "PENDING" | "PAID" | "DELIVERED" | "CANCELLED";
-  paymentProvider: "GATEWAYCRYPTO" | "PAYMENTO" | null;
+  paymentProvider: "GATEWAYCRYPTO" | "PAYMENTO" | "NOWPAYMENTS" | null;
   paymentChargeId: string | null;
   amountUsd: number;
   paidAt: string | null;
