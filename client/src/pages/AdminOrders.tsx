@@ -150,10 +150,13 @@ export default function AdminOrders() {
                   )}
                 </div>
               </div>
-              <div className="text-sm">
-                <span className="font-medium">{order.product?.name || "—"}</span>
-                <span className="text-gray-500 ml-2">${order.amountUsd}</span>
-                {order.paymentProvider && <span className="text-gray-600 ml-2">• {order.paymentProvider}</span>}
+              <div className="flex items-center justify-between text-sm">
+                <div>
+                  <span className="font-medium">{order.product?.name || "—"}</span>
+                  <span className="text-gray-500 ml-2">${order.amountUsd}</span>
+                  {order.paymentProvider && <span className="text-gray-600 ml-2">• {order.paymentProvider}</span>}
+                </div>
+                <span className="text-xs text-gray-600">{new Date(order.createdAt).toLocaleString()}</span>
               </div>
             </div>
           ))}
