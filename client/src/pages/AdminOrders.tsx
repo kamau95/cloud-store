@@ -28,6 +28,7 @@ export default function AdminOrders() {
   const [search, setSearch] = useState("");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
+  const [expandedId, setExpandedId] = useState<string | null>(null);
 
   const fetchOrders = () => {
     setLoading(true);
@@ -149,7 +150,33 @@ export default function AdminOrders() {
         <div className="space-y-3">
           {filtered.map((order) => (
             <div key={order.id} className="border border-gray-800 rounded-xl">
-              <div className="p-4 pb-3">
+              <div
+                className="md:hidden flex items-center justify-between p-4 cursor-pointer select-none"
+                onClick={() => setExpandedId(expandedId === order.id ? null : order.id)}
+              >
+                <div className="flex items-center gap-2 min-w-0">
+                  <span className="text-sm text-gray-500 shrink-0">#{order.id.slice(0, 8)}</span>
+                  <span className="text-sm text-gray-500 truncate">{order.user?.email || order.userId.slice(0, 8)}</span>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <span className={`text-xs font-medium px-2 py-1 rounded ${
+                    order.status === "DELIVERED" ? "bg-green-900 text-green-400" :
+                    order.status === "PENDING" ? "bg-yellow-900 text-yellow-400" :
+                    order.status === "PAID" ? "bg-blue-900 text-blue-400" :
+                    "bg-red-900 text-red-400"
+                  }`}>
+                    {order.status}
+                  </span>
+                  <svg
+                    className={`w-4 h-4 text-gray-500 transition-transform ${expandedId === order.id ? "rotate-180" : ""}`}
+                    fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </div>
+              </div>
+
+              <div className="hidden md:block p-4 pb-3">
                 <div className="flex items-center justify-between mb-2">
                   <div>
                     <span className="text-sm text-gray-500">#{order.id.slice(0, 8)}</span>
@@ -181,37 +208,59 @@ export default function AdminOrders() {
                   </div>
                 </div>
               </div>
-              {(order.status === "PENDING" || order.status === "CANCELLED") && (
-                <div className="border-t border-gray-800 px-4 py-2.5 flex items-center justify-end gap-2">
-                  {order.status === "PENDING" && (
-                    <>
+
+              <div className={`md:block ${expandedId === order.id ? "block" : "hidden"}`}>
+                <div className="md:hidden px-4 pb-3">
+                  <div className="flex items-center justify-between text-sm">
+                    <div>
+                      <span className="font-medium">{order.product?.name || "—"}</span>
+                      <span className="text-gray-500 ml-2">${order.amountUsd}</span>
+                      {order.paymentProvider && <span className="text-gray-600 ml-2">• {order.paymentProvider}</span>}
+                    </div>
+                    <div className="text-right text-xs text-gray-600">
+                      <div>{new Date(order.createdAt).toLocaleString()}</div>
+                      {order.status === "PAID" && order.paidAt && (
+                        <div className="text-blue-400">Paid: {new Date(order.paidAt).toLocaleString()}</div>
+                      )}
+                      {order.status === "DELIVERED" && order.deliveredAt && (
+                        <div className="text-green-400">Delivered: {new Date(order.deliveredAt).toLocaleString()}</div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {(order.status === "PENDING" || order.status === "CANCELLED") && (
+                  <div className="border-t border-gray-800 px-4 py-2.5 flex items-center justify-end gap-2">
+                    {order.status === "PENDING" && (
+                      <>
+                        <button
+                          onClick={() => handleDeliver(order.id)}
+                          className="inline-flex items-center gap-1.5 text-xs font-medium bg-green-600 hover:bg-green-500 text-white px-3 py-1.5 rounded-lg transition"
+                        >
+                          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                          Deliver
+                        </button>
+                        <button
+                          onClick={() => handleCancel(order.id)}
+                          className="inline-flex items-center gap-1.5 text-xs font-medium bg-red-600 hover:bg-red-500 text-white px-3 py-1.5 rounded-lg transition"
+                        >
+                          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                          Cancel
+                        </button>
+                      </>
+                    )}
+                    {order.status === "CANCELLED" && (
                       <button
-                        onClick={() => handleDeliver(order.id)}
-                        className="inline-flex items-center gap-1.5 text-xs font-medium bg-green-600 hover:bg-green-500 text-white px-3 py-1.5 rounded-lg transition"
-                      >
-                        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
-                        Deliver
-                      </button>
-                      <button
-                        onClick={() => handleCancel(order.id)}
+                        onClick={() => handleDelete(order.id)}
                         className="inline-flex items-center gap-1.5 text-xs font-medium bg-red-600 hover:bg-red-500 text-white px-3 py-1.5 rounded-lg transition"
                       >
-                        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-                        Cancel
+                        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                        Delete
                       </button>
-                    </>
-                  )}
-                  {order.status === "CANCELLED" && (
-                    <button
-                      onClick={() => handleDelete(order.id)}
-                      className="inline-flex items-center gap-1.5 text-xs font-medium bg-red-600 hover:bg-red-500 text-white px-3 py-1.5 rounded-lg transition"
-                    >
-                      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                      Delete
-                    </button>
-                  )}
-                </div>
-              )}
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
           ))}
         </div>
