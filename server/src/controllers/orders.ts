@@ -13,7 +13,7 @@ export const checkoutSchema = z.object({
 
 export async function checkout(req: AuthRequest, res: Response): Promise<void> {
   const { productId } = req.body;
-  const userId = req.user!.userId;
+  const userId = req.user!.id;
 
   const product = await prisma.product.findUnique({ where: { id: productId } });
   if (!product || !product.active) {
@@ -94,7 +94,7 @@ export async function checkout(req: AuthRequest, res: Response): Promise<void> {
 
 export async function getMyOrders(req: AuthRequest, res: Response): Promise<void> {
   const orders = await prisma.order.findMany({
-    where: { userId: req.user!.userId },
+    where: { userId: req.user!.id },
     include: { product: true },
     orderBy: { createdAt: "desc" },
   });
@@ -110,7 +110,7 @@ export async function getCheckoutDetails(req: AuthRequest, res: Response): Promi
     res.status(404).json({ error: "Order not found" });
     return;
   }
-  if (order.userId !== req.user!.userId && req.user!.role !== "ADMIN") {
+  if (order.userId !== req.user!.id && req.user!.role !== "ADMIN") {
     res.status(403).json({ error: "Not your order" });
     return;
   }
@@ -158,7 +158,7 @@ export async function getOrderCredentials(req: AuthRequest, res: Response): Prom
     res.status(404).json({ error: "Order not found" });
     return;
   }
-  if (order.userId !== req.user!.userId && req.user!.role !== "ADMIN") {
+  if (order.userId !== req.user!.id && req.user!.role !== "ADMIN") {
     res.status(403).json({ error: "Not your order" });
     return;
   }

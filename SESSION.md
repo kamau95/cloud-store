@@ -41,9 +41,10 @@ Cloud store selling cloud service accounts (AWS, GCP, Azure credentials). Custom
 | `server/src/routes/admin.ts` | Route-level admin/super-admin permission split |
 | `client/src/pages/Checkout.tsx` | Checkout page — address display, exchange guide, pre-payment checklist, live polling |
 | `client/src/pages/AdminDashboard.tsx` | Role-based rendering — super-admin sees fee cards |
-| `client/src/pages/AdminOrders.tsx` | Orders management — tab filter, search, date range, deliver/cancel/delete |
+| `client/src/pages/AdminOrders.tsx` | Orders management — desktop (tab filter + inline cards), mobile (vertical status accordion with inline details) |
 | `client/src/pages/AdminUsers.tsx` | Super admin user management — list users, change roles |
 | `client/src/pages/AdminProducts.tsx` | Product CRUD — create, edit, delete, JSON specs editor |
+| `client/src/components/Layout.tsx` | Responsive nav — desktop inline links, mobile hamburger dropdown |
 | `server/prisma/schema.prisma` | `Role` enum (USER/ADMIN/SUPER_ADMIN), `PaymentProvider` enum (NOWPAYMENTS), crypto+fee fields on Order |
 
 ## DB Migrations Applied (6)
@@ -65,6 +66,7 @@ Cloud store selling cloud service accounts (AWS, GCP, Azure credentials). Custom
 | `NOWPAYMENTS_ADMIN_FEE_PERCENT` | `0.05` |
 | `APP_URL` | `https://cloud-store-ykd3.onrender.com` |
 | `FRONTEND_URL` | `https://cloud-store-ykd3.onrender.com` |
+| `GOOGLE_CLIENT_ID` | (placeholder — set up Google OAuth from Cloud Console when ready) |
 
 ## Current Status
 - ✅ NOWPayments service layer implemented (`server/src/services/nowpayments.ts`)
@@ -76,11 +78,16 @@ Cloud store selling cloud service accounts (AWS, GCP, Azure credentials). Custom
 - ✅ Admin user management UI — super admins can view users and change roles (`/admin/users`)
 - ✅ Product specs editor — JSON field in admin product create/edit form
 - ✅ Admin orders search & date filter — search by order ID / email, filter by date range
+- ✅ Responsive mobile nav — hamburger menu with all links on small screens
+- ✅ Admin orders mobile layout — vertical status accordion with inline order details
+- ✅ Action buttons redesign — icons + filled buttons in a dedicated bottom bar
 - ⏳ **Needs**: Register on NOWPayments → generate API key + IPN secret → set env vars on Render
 - ⏳ **Needs**: Set payout wallet in NOWPayments dashboard (USDT TRC-20 address)
 
 ## How to Resume
 1. Register at [NOWPayments.io](https://nowpayments.io) → Dashboard → Settings → API keys → generate API key + IPN secret
+   - Then set `GOOGLE_CLIENT_ID` in server `.env` from Google Cloud Console → APIs & Services → Credentials → OAuth client ID (Web application)
+   - Authorized JS origins: `http://localhost:5173`, `https://cloud-store-ykd3.onrender.com`
 2. Set payout wallet in Dashboard → Settings → Payout wallets (USDT TRC-20 address)
 3. Set env vars on Render: `NOWPAYMENTS_API_KEY`, `NOWPAYMENTS_IPN_SECRET`, `NOWPAYMENTS_CALLBACK_URL`
 4. Redeploy on Render — migrations auto-apply on startup

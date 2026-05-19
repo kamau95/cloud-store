@@ -1,8 +1,6 @@
 import { useState, FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import { api } from "../api/client";
-import { AuthResponse } from "../types";
 import toast from "react-hot-toast";
 
 export default function Login() {
@@ -16,8 +14,7 @@ export default function Login() {
     e.preventDefault();
     setLoading(true);
     try {
-      const data = await api.post<AuthResponse>("/auth/login", { email, password });
-      login(data.token, data.user);
+      await login(email, password);
       toast.success("Logged in");
       navigate("/products");
     } catch (err) {
@@ -58,6 +55,9 @@ export default function Login() {
         >
           {loading ? "Logging in..." : "Login"}
         </button>
+        <p className="text-center text-sm text-gray-500 mt-2">
+          <Link to="/forgot-password" className="text-blue-400 hover:underline">Forgot password?</Link>
+        </p>
       </form>
       <p className="text-center text-sm text-gray-500 mt-6">
         Don't have an account? <Link to="/register" className="text-blue-400 hover:underline">Register</Link>

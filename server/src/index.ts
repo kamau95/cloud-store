@@ -2,21 +2,58 @@ import "dotenv/config";
 import path from "path";
 import express from "express";
 import cors from "cors";
+import helmet from "helmet";
+import rateLimit, { ipKeyGenerator } from "express-rate-limit";
+import { sessionMiddleware, passport } from "./services/session";
+import { sessionBinding, tokenVersionCheck } from "./middleware/auth";
 import authRoutes from "./routes/auth";
 import productRoutes from "./routes/products";
 import orderRoutes from "./routes/orders";
 import webhookRoutes from "./routes/webhooks";
 import adminRoutes from "./routes/admin";
+import passwordRoutes from "./routes/password";
+import sessionRoutes from "./routes/sessions";
 import { seedDatabase } from "./seed";
 
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-app.use(cors({ origin: process.env.FRONTEND_URL || "http://localhost:5173" }));
+app.set("trust proxy", 1);
+
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      frameAncestors: ["'none'"],
+    },
+  },
+  hsts: { maxAge: 63072000, preload: true },
+}));
+
+app.use(cors({
+  origin: process.env.FRONTEND_URL || "http://localhost:5173",
+  credentials: true,
+}));
+
+app.use(sessionMiddleware);
+app.use(passport.initialize());
+app.use(passport.session());
+
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  keyGenerator: (req) => `${ipKeyGenerator(req.ip || req.socket.remoteAddress || "")}-${(req.body?.email || "").toLowerCase()}`,
+  message: { error: "Too many login attempts. Try again later." },
+});
+
+app.use("/api/auth/login", loginLimiter);
 
 app.use("/api/orders/webhook", express.raw({ type: "application/json" }), webhookRoutes);
 
 app.use(express.json());
+
+app.use(sessionBinding);
+app.use(tokenVersionCheck);
 
 app.get("/api/health", (_req, res) => {
   res.json({ status: "ok", timestamp: new Date().toISOString(), version: "seed-on-startup" });
@@ -26,6 +63,8 @@ app.use("/api/auth", authRoutes);
 app.use("/api/products", productRoutes);
 app.use("/api/orders", orderRoutes);
 app.use("/api/admin", adminRoutes);
+app.use("/api/password", passwordRoutes);
+app.use("/api/sessions", sessionRoutes);
 
 if (process.env.NODE_ENV === "production") {
   const clientDist = path.join(__dirname, "../../client/dist");

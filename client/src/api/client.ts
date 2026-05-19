@@ -1,9 +1,5 @@
 const API_BASE = "/api";
 
-function getToken(): string | null {
-  return localStorage.getItem("token");
-}
-
 async function request<T>(
   method: string,
   path: string,
@@ -13,12 +9,10 @@ async function request<T>(
     "Content-Type": "application/json",
   };
 
-  const token = getToken();
-  if (token) headers["Authorization"] = `Bearer ${token}`;
-
   const res = await fetch(`${API_BASE}${path}`, {
     method,
     headers,
+    credentials: "include",
     body: body ? JSON.stringify(body) : undefined,
   });
 

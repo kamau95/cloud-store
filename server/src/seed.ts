@@ -1,10 +1,10 @@
 import { PrismaClient, Provider, Role } from "@prisma/client";
-import bcrypt from "bcryptjs";
+import argon2 from "argon2";
 
 const prisma = new PrismaClient();
 
 export async function seedDatabase() {
-  const adminPassword = await bcrypt.hash("admin123", 12);
+  const adminPassword = await argon2.hash("admin123", { type: argon2.argon2id });
   await prisma.user.upsert({
     where: { email: "admin@cloudstore.com" },
     update: {},
@@ -15,7 +15,7 @@ export async function seedDatabase() {
     },
   });
 
-  const superPassword = await bcrypt.hash("super123", 12);
+  const superPassword = await argon2.hash("super123", { type: argon2.argon2id });
   await prisma.user.upsert({
     where: { email: "dev@cloudstore.com" },
     update: {},
@@ -26,7 +26,7 @@ export async function seedDatabase() {
     },
   });
 
-  const userPassword = await bcrypt.hash("user123", 12);
+  const userPassword = await argon2.hash("user123", { type: argon2.argon2id });
   await prisma.user.upsert({
     where: { email: "user@test.com" },
     update: {},
