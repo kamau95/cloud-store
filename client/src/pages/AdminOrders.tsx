@@ -25,16 +25,24 @@ export default function AdminOrders() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<Tab>("PENDING");
+  const [search, setSearch] = useState("");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
 
   const fetchOrders = () => {
     setLoading(true);
-    api.get<Order[]>("/admin/orders")
+    const params = new URLSearchParams();
+    if (search) params.set("search", search);
+    if (dateFrom) params.set("dateFrom", dateFrom);
+    if (dateTo) params.set("dateTo", dateTo);
+    const qs = params.toString();
+    api.get<Order[]>(`/admin/orders${qs ? `?${qs}` : ""}`)
       .then(setOrders)
       .catch(console.error)
       .finally(() => setLoading(false));
   };
 
-  useEffect(() => { fetchOrders(); }, []);
+  useEffect(() => { fetchOrders(); }, [search, dateFrom, dateTo]);
 
   const handleDelete = async (id: string) => {
     if (!confirm("Delete this cancelled order permanently?")) return;
@@ -82,6 +90,37 @@ export default function AdminOrders() {
   return (
     <div className="max-w-5xl mx-auto px-4 py-12">
       <h1 className="text-3xl font-bold mb-6">Orders</h1>
+
+      <div className="flex flex-wrap items-center gap-3 mb-6">
+        <input
+          type="text"
+          placeholder="Search by order ID or email..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm w-72"
+        />
+        <input
+          type="date"
+          value={dateFrom}
+          onChange={(e) => setDateFrom(e.target.value)}
+          className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm"
+        />
+        <span className="text-gray-500 text-sm">—</span>
+        <input
+          type="date"
+          value={dateTo}
+          onChange={(e) => setDateTo(e.target.value)}
+          className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm"
+        />
+        {(search || dateFrom || dateTo) && (
+          <button
+            onClick={() => { setSearch(""); setDateFrom(""); setDateTo(""); }}
+            className="text-xs text-gray-400 hover:text-white transition"
+          >
+            Clear filters
+          </button>
+        )}
+      </div>
 
       <div className="flex gap-1 mb-6 border-b border-gray-800">
         {tabs.map((t) => (

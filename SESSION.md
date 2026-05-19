@@ -32,14 +32,18 @@ Cloud store selling cloud service accounts (AWS, GCP, Azure credentials). Custom
 
 ## Key Files
 | File | Purpose |
-|---|---|
+|---|---|---|
 | `server/src/services/nowpayments.ts` | API client: `createPayment()`, `getPaymentStatus()`, `verifyIPN()`, `calculateFees()` |
 | `server/src/routes/webhooks.ts` | HMAC-SHA512 IPN verification middleware + NOWPayments webhook route |
 | `server/src/controllers/webhooks.ts` | Webhook handler — verifies payment, calls `processPayment` |
 | `server/src/controllers/orders.ts` | Checkout flow, checkout details, payment status polling |
+| `server/src/controllers/admin.ts` | Admin controllers — CRUD products, orders, accounts + `deleteOrder()` (cancelled only) |
 | `server/src/routes/admin.ts` | Route-level admin/super-admin permission split |
 | `client/src/pages/Checkout.tsx` | Checkout page — address display, exchange guide, pre-payment checklist, live polling |
 | `client/src/pages/AdminDashboard.tsx` | Role-based rendering — super-admin sees fee cards |
+| `client/src/pages/AdminOrders.tsx` | Orders management — tab filter, search, date range, deliver/cancel/delete |
+| `client/src/pages/AdminUsers.tsx` | Super admin user management — list users, change roles |
+| `client/src/pages/AdminProducts.tsx` | Product CRUD — create, edit, delete, JSON specs editor |
 | `server/prisma/schema.prisma` | `Role` enum (USER/ADMIN/SUPER_ADMIN), `PaymentProvider` enum (NOWPAYMENTS), crypto+fee fields on Order |
 
 ## DB Migrations Applied (6)
@@ -68,6 +72,10 @@ Cloud store selling cloud service accounts (AWS, GCP, Azure credentials). Custom
 - ✅ Code pushed to GitHub (`main` branch)
 - ✅ Deployed on Render (Dockerfile-based, single service)
 - ✅ 6 migrations applied on deploy via `npx prisma migrate deploy`
+- ✅ Admin can delete cancelled orders permanently (`DELETE /admin/orders/:id`)
+- ✅ Admin user management UI — super admins can view users and change roles (`/admin/users`)
+- ✅ Product specs editor — JSON field in admin product create/edit form
+- ✅ Admin orders search & date filter — search by order ID / email, filter by date range
 - ⏳ **Needs**: Register on NOWPayments → generate API key + IPN secret → set env vars on Render
 - ⏳ **Needs**: Set payout wallet in NOWPayments dashboard (USDT TRC-20 address)
 

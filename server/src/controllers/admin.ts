@@ -36,7 +36,26 @@ export async function getUsers(req: AuthRequest, res: Response): Promise<void> {
 }
 
 export async function getAllOrders(req: AuthRequest, res: Response): Promise<void> {
+  const { search, dateFrom, dateTo } = req.query;
+
+  const where: Record<string, unknown> = {};
+
+  if (search) {
+    where.OR = [
+      { id: { contains: search as string, mode: "insensitive" } },
+      { user: { email: { contains: search as string, mode: "insensitive" } } },
+    ];
+  }
+
+  if (dateFrom || dateTo) {
+    const createdAt: Record<string, Date> = {};
+    if (dateFrom) createdAt.gte = new Date(dateFrom as string);
+    if (dateTo) createdAt.lte = new Date(dateTo as string);
+    where.createdAt = createdAt;
+  }
+
   const orders = await prisma.order.findMany({
+    where,
     include: { user: { select: { email: true } }, product: true },
     orderBy: { createdAt: "desc" },
   });
@@ -166,6 +185,29 @@ export async function getFeeSummary(
     totalSellerPayouts,
     totalCollected: totalProductRevenue,
   });
+}
+
+export const updateRoleSchema = z.object({
+  role: z.enum(["USER", "ADMIN", "SUPER_ADMIN"]),
+});
+
+export async function updateUserRole(req: AuthRequest, res: Response): Promise<void> {
+  const { role } = req.body;
+  const { id } = req.params;
+
+  const user = await prisma.user.findUnique({ where: { id } });
+  if (!user) {
+    res.status(404).json({ error: "User not found" });
+    return;
+  }
+
+  const updated = await prisma.user.update({
+    where: { id },
+    data: { role },
+    select: { id: true, email: true, role: true, createdAt: true },
+  });
+
+  res.json(updated);
 }
 
 export async function listAccountPool(req: AuthRequest, res: Response): Promise<void> {

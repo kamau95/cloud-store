@@ -16,6 +16,7 @@ router.post("/accounts/upload", validate(admin.uploadAccountsSchema), admin.uplo
 router.get("/accounts", admin.listAccountPool);
 
 router.get("/users", requireSuperAdmin, admin.getUsers);
+router.patch("/users/:id/role", requireSuperAdmin, validate(admin.updateRoleSchema), admin.updateUserRole);
 router.get("/fees", requireSuperAdmin, admin.getFeeSummary);
 
 export default router;
