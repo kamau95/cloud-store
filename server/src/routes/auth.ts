@@ -11,9 +11,12 @@ router.post("/login", validate(auth.loginSchema), (req, res, next) => {
   passport.authenticate("local", (err: any, user: any, info: any) => {
     if (err) return next(err);
     if (!user) return res.status(401).json({ error: info?.message || "Authentication failed" });
-    req.login(user, (loginErr) => {
-      if (loginErr) return next(loginErr);
-      res.json({ user: { id: user.id, email: user.email, role: user.role } });
+    req.session.regenerate((regErr) => {
+      if (regErr) return next(regErr);
+      req.login(user, (loginErr) => {
+        if (loginErr) return next(loginErr);
+        res.json({ user: { id: user.id, email: user.email, role: user.role } });
+      });
     });
   })(req, res, next);
 });
