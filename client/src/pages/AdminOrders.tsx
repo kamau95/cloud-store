@@ -156,7 +156,15 @@ export default function AdminOrders() {
                   <span className="text-gray-500 ml-2">${order.amountUsd}</span>
                   {order.paymentProvider && <span className="text-gray-600 ml-2">• {order.paymentProvider}</span>}
                 </div>
-                <span className="text-xs text-gray-600">{new Date(order.createdAt).toLocaleString()}</span>
+                <div className="text-right text-xs text-gray-600">
+                  <div>{new Date(order.createdAt).toLocaleString()}</div>
+                  {order.status === "PAID" && order.paidAt && (
+                    <div className="text-blue-400">Paid: {new Date(order.paidAt).toLocaleString()}</div>
+                  )}
+                  {order.status === "DELIVERED" && order.deliveredAt && (
+                    <div className="text-green-400">Delivered: {new Date(order.deliveredAt).toLocaleString()}</div>
+                  )}
+                </div>
               </div>
             </div>
           ))}
