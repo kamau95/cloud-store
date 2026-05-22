@@ -20,7 +20,6 @@ const PORT = process.env.PORT || 3001;
 app.set("trust proxy", 1);
 
 const firebaseAuthDomain = process.env.FIREBASE_AUTH_DOMAIN || "";
-const firebaseProjectId = process.env.FIREBASE_PROJECT_ID || "";
 
 app.use(helmet({
   contentSecurityPolicy: {
@@ -29,7 +28,8 @@ app.use(helmet({
       connectSrc: [
         "'self'",
         ...(firebaseAuthDomain ? [`https://${firebaseAuthDomain}`] : []),
-        ...(firebaseProjectId ? [`https://identitytoolkit.googleapis.com`, `https://securetoken.googleapis.com`] : []),
+        "https://identitytoolkit.googleapis.com",
+        "https://securetoken.googleapis.com",
       ],
       imgSrc: ["'self'", "data:", "blob:"],
       scriptSrc: ["'self'"],
