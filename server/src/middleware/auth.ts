@@ -36,7 +36,7 @@ export async function authenticate(req: AuthRequest, res: Response, next: NextFu
     userId: decoded.uid,
     id: decoded.uid,
     email: decoded.email || "",
-    role: "USER",
+    role: "LOW",
     tokenVersion: 0,
   };
   next();
@@ -67,7 +67,7 @@ export async function tokenVersionCheck(req: AuthRequest, res: Response, next: N
 }
 
 export function requireAdmin(req: AuthRequest, res: Response, next: NextFunction): void {
-  if (!req.user || (req.user.role !== "ADMIN" && req.user.role !== "SUPER_ADMIN")) {
+  if (!req.user || (req.user.role !== "MID" && req.user.role !== "TOP")) {
     res.status(403).json({ error: "Admin access required" });
     return;
   }
@@ -75,7 +75,7 @@ export function requireAdmin(req: AuthRequest, res: Response, next: NextFunction
 }
 
 export function requireSuperAdmin(req: AuthRequest, res: Response, next: NextFunction): void {
-  if (!req.user || req.user.role !== "SUPER_ADMIN") {
+  if (!req.user || req.user.role !== "TOP") {
     res.status(403).json({ error: "Super admin access required" });
     return;
   }

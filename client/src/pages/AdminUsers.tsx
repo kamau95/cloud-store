@@ -33,7 +33,7 @@ export default function AdminUsers() {
       ADMIN: "bg-blue-900 text-blue-400",
       USER: "bg-gray-800 text-gray-400",
     };
-    return `text-xs font-medium px-2 py-1 rounded ${colors[role] || colors.USER}`;
+    return `text-xs font-medium px-2 py-1 rounded ${colors[role] || colors.LOW}`;
   };
 
   return (
@@ -60,9 +60,9 @@ export default function AdminUsers() {
                 onChange={(e) => handleRoleChange(u.id, e.target.value)}
                 className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-1.5 text-sm"
               >
-                <option value="USER">USER</option>
-                <option value="ADMIN">ADMIN</option>
-                <option value="SUPER_ADMIN">SUPER_ADMIN</option>
+                <option value="LOW">LOW</option>
+                <option value="MID">MID</option>
+                <option value="TOP">TOP</option>
               </select>
             </div>
           ))}

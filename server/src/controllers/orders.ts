@@ -110,7 +110,7 @@ export async function getCheckoutDetails(req: AuthRequest, res: Response): Promi
     res.status(404).json({ error: "Order not found" });
     return;
   }
-  if (order.userId !== req.user!.id && req.user!.role !== "ADMIN") {
+  if (order.userId !== req.user!.id && req.user!.role !== "MID") {
     res.status(403).json({ error: "Not your order" });
     return;
   }
@@ -158,7 +158,7 @@ export async function getOrderCredentials(req: AuthRequest, res: Response): Prom
     res.status(404).json({ error: "Order not found" });
     return;
   }
-  if (order.userId !== req.user!.id && req.user!.role !== "ADMIN") {
+  if (order.userId !== req.user!.id && req.user!.role !== "MID") {
     res.status(403).json({ error: "Not your order" });
     return;
   }

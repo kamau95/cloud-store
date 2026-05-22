@@ -188,7 +188,7 @@ export async function getFeeSummary(
 }
 
 export const updateRoleSchema = z.object({
-  role: z.enum(["USER", "ADMIN", "SUPER_ADMIN"]),
+  role: z.enum(["LOW", "MID", "TOP"]),
 });
 
 export async function updateUserRole(req: AuthRequest, res: Response): Promise<void> {

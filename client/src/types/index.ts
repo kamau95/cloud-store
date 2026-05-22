@@ -1,7 +1,7 @@
 export interface User {
   id: string;
   email: string;
-  role: "USER" | "ADMIN" | "SUPER_ADMIN";
+  role: "LOW" | "MID" | "TOP";
   createdAt?: string;
 }
 

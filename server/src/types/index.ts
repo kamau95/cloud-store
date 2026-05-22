@@ -4,7 +4,7 @@ export interface JwtPayload {
   userId: string;
   id: string;
   email: string;
-  role: "USER" | "ADMIN" | "SUPER_ADMIN";
+      role: "LOW" | "MID" | "TOP";
   tokenVersion: number;
 }
 
@@ -23,7 +23,7 @@ declare global {
       id: string;
       userId: string;
       email: string;
-      role: "USER" | "ADMIN" | "SUPER_ADMIN";
+  role: "LOW" | "MID" | "TOP";
       tokenVersion: number;
     }
   }

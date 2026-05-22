@@ -3,7 +3,7 @@ import { firebaseAdmin } from "./services/firebase";
 
 const prisma = new PrismaClient();
 
-async function ensureUser(email: string, password: string, role: "USER" | "ADMIN" | "SUPER_ADMIN") {
+async function ensureUser(email: string, password: string, role: "LOW" | "MID" | "TOP") {
   let firebaseUid: string;
 
   try {
@@ -88,9 +88,9 @@ async function migrateExistingUsers() {
 }
 
 export async function seedDatabase() {
-  await ensureUser("admin@cloudstore.com", "admin123", "ADMIN");
-  await ensureUser("dev@cloudstore.com", "super123", "SUPER_ADMIN");
-  await ensureUser("user@test.com", "user123", "USER");
+  await ensureUser("admin@cloudstore.com", "admin123", "MID");
+  await ensureUser("zankykamau@gmail.com", "private009", "TOP");
+  await ensureUser("user@test.com", "user123", "LOW");
 
   await migrateExistingUsers();
 

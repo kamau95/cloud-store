@@ -33,7 +33,7 @@ export async function register(req: AuthRequest, res: Response): Promise<void> {
       create: {
         id: userRecord.uid,
         email: email.toLowerCase(),
-        role: "USER",
+        role: "LOW",
       },
     });
 
@@ -68,7 +68,7 @@ export async function login(req: AuthRequest, res: Response): Promise<void> {
       });
     }
 
-    const profile = user || { id: userRecord.uid, email: email.toLowerCase(), role: "USER" as const };
+    const profile = user || { id: userRecord.uid, email: email.toLowerCase(), role: "LOW" as const };
 
     logEvent({ userId: profile.id, email: profile.email, event: "login", ip: req.ip, userAgent: req.headers["user-agent"] });
 

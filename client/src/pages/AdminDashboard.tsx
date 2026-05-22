@@ -15,7 +15,7 @@ interface FeeSummary {
 export default function AdminDashboard() {
   const { user } = useAuth();
   const [fees, setFees] = useState<FeeSummary | null>(null);
-  const isSuper = user?.role === "SUPER_ADMIN";
+  const isSuper = user?.role === "TOP";
 
   useEffect(() => {
     if (isSuper) {
