@@ -1,6 +1,6 @@
 import { useState, FormEvent, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { supabase } from "../lib/supabase";
+import { getSupabase } from "../lib/supabase";
 import toast from "react-hot-toast";
 
 export default function ResetPassword() {
@@ -10,10 +10,10 @@ export default function ResetPassword() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) {
-        setReady(true);
-      }
+    getSupabase().then((sb) => {
+      sb.auth.getSession().then(({ data: { session } }) => {
+        if (session) setReady(true);
+      });
     });
   }, []);
 
@@ -21,10 +21,11 @@ export default function ResetPassword() {
     e.preventDefault();
     setLoading(true);
     try {
-      const { error } = await supabase.auth.updateUser({ password });
+      const sb = await getSupabase();
+      const { error } = await sb.auth.updateUser({ password });
       if (error) throw error;
       toast.success("Password reset. Please log in.");
-      await supabase.auth.signOut();
+      await sb.auth.signOut();
       navigate("/login");
     } catch (err) {
       toast.error((err as Error).message);

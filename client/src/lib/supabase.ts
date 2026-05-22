@@ -1,6 +1,11 @@
-import { createClient } from "@supabase/supabase-js";
+import { createClient, SupabaseClient } from "@supabase/supabase-js";
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || "";
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || "";
+let client: SupabaseClient | null = null;
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+export async function getSupabase(): Promise<SupabaseClient> {
+  if (client) return client;
+  const res = await fetch("/api/auth/config");
+  const config = await res.json();
+  client = createClient(config.supabaseUrl, config.supabaseAnonKey);
+  return client;
+}
