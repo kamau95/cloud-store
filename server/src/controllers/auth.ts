@@ -19,37 +19,38 @@ export const loginSchema = z.object({
 
 export async function register(req: AuthRequest, res: Response): Promise<void> {
   const { email, password } = req.body;
+  const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
 
-  const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
+  const { data, error } = await supabaseAnon.auth.signUp({
     email: email.toLowerCase(),
     password,
-    email_confirm: true,
+    options: { emailRedirectTo: `${frontendUrl}/login` },
   });
 
-  if (authError) {
-    if (authError.message.includes("already registered")) {
+  if (error) {
+    if (error.message.includes("already registered")) {
       res.status(409).json({ error: "Email already registered" });
       return;
     }
-    res.status(500).json({ error: authError.message });
+    res.status(500).json({ error: error.message });
     return;
   }
 
-  const supabaseId = authData.user!.id;
+  if (data.user) {
+    await prisma.user.upsert({
+      where: { id: data.user.id },
+      update: { email: email.toLowerCase() },
+      create: {
+        id: data.user.id,
+        email: email.toLowerCase(),
+        role: "USER",
+      },
+    });
 
-  await prisma.user.upsert({
-    where: { id: supabaseId },
-    update: { email: email.toLowerCase() },
-    create: {
-      id: supabaseId,
-      email: email.toLowerCase(),
-      role: "USER",
-    },
-  });
+    logEvent({ userId: data.user.id, email: email.toLowerCase(), event: "register", ip: req.ip, userAgent: req.headers["user-agent"] });
+  }
 
-  logEvent({ userId: supabaseId, email: email.toLowerCase(), event: "register", ip: req.ip, userAgent: req.headers["user-agent"] });
-
-  res.status(201).json({ user: { id: supabaseId, email: email.toLowerCase(), role: "USER" } });
+  res.status(201).json({ message: "Check your email for confirmation link" });
 }
 
 export async function login(req: AuthRequest, res: Response): Promise<void> {

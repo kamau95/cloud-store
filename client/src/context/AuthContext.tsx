@@ -78,7 +78,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const err = await res.json();
       throw new Error(err.error || "Registration failed");
     }
-    await login(email, password);
   };
 
   const logout = async () => {

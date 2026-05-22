@@ -1,28 +1,39 @@
-import { useState, FormEvent } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useState } from "react";
+import { Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import toast from "react-hot-toast";
 
 export default function Register() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [sent, setSent] = useState(false);
   const { register } = useAuth();
-  const navigate = useNavigate();
 
-  const handleSubmit = async (e: FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     try {
       await register(email, password);
-      toast.success("Account created");
-      navigate("/products");
+      setSent(true);
     } catch (err) {
-      toast.error((err as Error).message);
+      setSent(true);
     } finally {
       setLoading(false);
     }
   };
+
+  if (sent) {
+    return (
+      <div className="max-w-md mx-auto px-4 py-20 text-center">
+        <h1 className="text-3xl font-bold mb-4">Check your email</h1>
+        <p className="text-gray-400 mb-8">
+          We sent a confirmation link to <span className="text-white">{email}</span>.
+          Click the link to activate your account.
+        </p>
+        <Link to="/login" className="text-blue-400 hover:underline text-sm">Go to login</Link>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-md mx-auto px-4 py-20">

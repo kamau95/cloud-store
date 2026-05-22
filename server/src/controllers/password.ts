@@ -1,6 +1,6 @@
 import { Response } from "express";
 import { z } from "zod";
-import { supabaseAdmin } from "../services/session";
+import { supabaseAdmin, supabaseAnon } from "../services/session";
 import { logEvent } from "../services/audit";
 import { AuthRequest } from "../types";
 
@@ -15,10 +15,10 @@ export const resetSchema = z.object({
 
 export async function forgotPassword(req: AuthRequest, res: Response): Promise<void> {
   const { email } = req.body;
+  const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
 
-  const { error } = await supabaseAdmin.auth.admin.generateLink({
-    type: "recovery",
-    email: email.toLowerCase(),
+  const { error } = await supabaseAnon.auth.resetPasswordForEmail(email.toLowerCase(), {
+    redirectTo: `${frontendUrl}/reset-password`,
   });
 
   if (error) {
