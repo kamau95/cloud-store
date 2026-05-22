@@ -1,9 +1,19 @@
 import admin from "firebase-admin";
 
+function parsePrivateKey(key?: string): string | undefined {
+  if (!key) return undefined;
+  if (key.includes("-----BEGIN")) return key.replace(/\\n/g, "\n");
+  try {
+    return Buffer.from(key, "base64").toString("utf-8");
+  } catch {
+    return key;
+  }
+}
+
 const serviceAccount = {
   projectId: process.env.FIREBASE_PROJECT_ID,
   clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-  privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, "\n"),
+  privateKey: parsePrivateKey(process.env.FIREBASE_PRIVATE_KEY),
 };
 
 if (!admin.apps.length) {
