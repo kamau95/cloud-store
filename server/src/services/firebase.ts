@@ -1,24 +1,31 @@
 import admin from "firebase-admin";
 
-function parsePrivateKey(key?: string): string | undefined {
-  if (!key) return undefined;
-  if (key.includes("-----BEGIN")) return key.replace(/\\n/g, "\n");
-  try {
-    return Buffer.from(key, "base64").toString("utf-8");
-  } catch {
-    return key;
+function getServiceAccount(): admin.ServiceAccount {
+  const json = process.env.FIREBASE_SERVICE_ACCOUNT;
+  if (json) {
+    return JSON.parse(json);
   }
-}
 
-const serviceAccount = {
-  projectId: process.env.FIREBASE_PROJECT_ID,
-  clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-  privateKey: parsePrivateKey(process.env.FIREBASE_PRIVATE_KEY),
-};
+  function parsePrivateKey(key?: string): string | undefined {
+    if (!key) return undefined;
+    if (key.includes("-----BEGIN")) return key.replace(/\\n/g, "\n");
+    try {
+      return Buffer.from(key, "base64").toString("utf-8");
+    } catch {
+      return key;
+    }
+  }
+
+  return {
+    projectId: process.env.FIREBASE_PROJECT_ID,
+    clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+    privateKey: parsePrivateKey(process.env.FIREBASE_PRIVATE_KEY),
+  };
+}
 
 if (!admin.apps.length) {
   admin.initializeApp({
-    credential: admin.credential.cert(serviceAccount as admin.ServiceAccount),
+    credential: admin.credential.cert(getServiceAccount()),
   });
 }
 
