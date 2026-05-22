@@ -1,4 +1,11 @@
+import { supabase } from "../lib/supabase";
+
 const API_BASE = "/api";
+
+async function getToken(): Promise<string | null> {
+  const { data } = await supabase.auth.getSession();
+  return data.session?.access_token || null;
+}
 
 async function request<T>(
   method: string,
@@ -9,10 +16,14 @@ async function request<T>(
     "Content-Type": "application/json",
   };
 
+  const token = await getToken();
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
+
   const res = await fetch(`${API_BASE}${path}`, {
     method,
     headers,
-    credentials: "include",
     body: body ? JSON.stringify(body) : undefined,
   });
 

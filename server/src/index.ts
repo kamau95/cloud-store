@@ -3,9 +3,8 @@ import path from "path";
 import express from "express";
 import cors from "cors";
 import helmet from "helmet";
-import rateLimit, { ipKeyGenerator } from "express-rate-limit";
-import { sessionMiddleware, passport } from "./services/session";
-import { sessionBinding, tokenVersionCheck } from "./middleware/auth";
+import rateLimit from "express-rate-limit";
+import { tokenVersionCheck } from "./middleware/auth";
 import authRoutes from "./routes/auth";
 import productRoutes from "./routes/products";
 import orderRoutes from "./routes/orders";
@@ -35,14 +34,10 @@ app.use(cors({
   credentials: true,
 }));
 
-app.use(sessionMiddleware);
-app.use(passport.initialize());
-app.use(passport.session());
-
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 10,
-  keyGenerator: (req) => `${ipKeyGenerator(req.ip || req.socket.remoteAddress || "")}-${(req.body?.email || "").toLowerCase()}`,
+  keyGenerator: (req) => `${req.ip || req.socket.remoteAddress || ""}-${(req.body?.email || "").toLowerCase()}`,
   message: { error: "Too many login attempts. Try again later." },
 });
 
@@ -52,11 +47,10 @@ app.use("/api/orders/webhook", express.raw({ type: "application/json" }), webhoo
 
 app.use(express.json());
 
-app.use(sessionBinding);
 app.use(tokenVersionCheck);
 
 app.get("/api/health", (_req, res) => {
-  res.json({ status: "ok", timestamp: new Date().toISOString(), version: "seed-on-startup" });
+  res.json({ status: "ok", timestamp: new Date().toISOString(), version: "supabase-auth" });
 });
 
 app.use("/api/auth", authRoutes);

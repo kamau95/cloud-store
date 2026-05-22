@@ -1,23 +1,20 @@
 import { useState, FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import { api } from "../api/client";
-import { User } from "../types";
 import toast from "react-hot-toast";
 
 export default function Register() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  const { login } = useAuth();
+  const { register } = useAuth();
   const navigate = useNavigate();
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setLoading(true);
     try {
-      const data = await api.post<{ user: User }>("/auth/register", { email, password });
-      await login(email, password);
+      await register(email, password);
       toast.success("Account created");
       navigate("/products");
     } catch (err) {

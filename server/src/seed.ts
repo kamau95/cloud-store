@@ -1,44 +1,48 @@
-import { PrismaClient, Provider, Role } from "@prisma/client";
-import argon2 from "argon2";
+import { PrismaClient, Provider } from "@prisma/client";
+import { supabaseAdmin } from "./services/session";
 
 const prisma = new PrismaClient();
 
+async function ensureUser(email: string, password: string, role: "USER" | "ADMIN" | "SUPER_ADMIN") {
+  const { data, error } = await supabaseAdmin.auth.admin.createUser({
+    email,
+    password,
+    email_confirm: true,
+  });
+
+  if (error) {
+    if (error.message.includes("already registered")) {
+      const { data: { users } } = await supabaseAdmin.auth.admin.listUsers();
+      const existing = users?.find((u) => u.email === email);
+      if (existing) {
+        await prisma.user.upsert({
+          where: { id: existing.id },
+          update: { role },
+          create: { id: existing.id, email, role },
+        });
+      }
+      return;
+    }
+    console.error(`Failed to create user ${email}:`, error.message);
+    return;
+  }
+
+  const uid = data.user!.id;
+  await prisma.user.upsert({
+    where: { id: uid },
+    update: { email, role },
+    create: { id: uid, email, role },
+  });
+}
+
 export async function seedDatabase() {
-  const adminPassword = await argon2.hash("admin123", { type: argon2.argon2id });
-  await prisma.user.upsert({
-    where: { email: "admin@cloudstore.com" },
-    update: {},
-    create: {
-      email: "admin@cloudstore.com",
-      passwordHash: adminPassword,
-      role: Role.ADMIN,
-    },
-  });
-
-  const superPassword = await argon2.hash("super123", { type: argon2.argon2id });
-  await prisma.user.upsert({
-    where: { email: "dev@cloudstore.com" },
-    update: {},
-    create: {
-      email: "dev@cloudstore.com",
-      passwordHash: superPassword,
-      role: Role.SUPER_ADMIN,
-    },
-  });
-
-  const userPassword = await argon2.hash("user123", { type: argon2.argon2id });
-  await prisma.user.upsert({
-    where: { email: "user@test.com" },
-    update: {},
-    create: {
-      email: "user@test.com",
-      passwordHash: userPassword,
-      role: Role.USER,
-    },
-  });
+  await ensureUser("admin@cloudstore.com", "admin123", "ADMIN");
+  await ensureUser("dev@cloudstore.com", "super123", "SUPER_ADMIN");
+  await ensureUser("user@test.com", "user123", "USER");
 
   const products = [
     {
+      id: "aws-developer-account",
       name: "AWS Developer Account",
       provider: Provider.AWS,
       description: "Full access AWS developer account with $100 credits. Ideal for testing and development.",
@@ -48,6 +52,7 @@ export async function seedDatabase() {
       stock: 10,
     },
     {
+      id: "aws-production-account",
       name: "AWS Production Account",
       provider: Provider.AWS,
       description: "Production-ready AWS account with $500 credits, high limits, and premium support.",
@@ -57,6 +62,7 @@ export async function seedDatabase() {
       stock: 5,
     },
     {
+      id: "gcp-starter-account",
       name: "GCP Starter Account",
       provider: Provider.GCP,
       description: "Google Cloud Platform account with $200 credits. Includes Compute Engine, Cloud Storage, and more.",
@@ -66,6 +72,7 @@ export async function seedDatabase() {
       stock: 10,
     },
     {
+      id: "azure-dev-account",
       name: "Azure Dev Account",
       provider: Provider.AZURE,
       description: "Microsoft Azure account with $150 credits for development and testing.",
@@ -78,12 +85,9 @@ export async function seedDatabase() {
 
   for (const product of products) {
     await prisma.product.upsert({
-      where: { id: product.name.toLowerCase().replace(/\s+/g, "-") },
+      where: { id: product.id },
       update: {},
-      create: {
-        id: product.name.toLowerCase().replace(/\s+/g, "-"),
-        ...product,
-      },
+      create: product,
     });
   }
 

@@ -1,6 +1,6 @@
 import { useState, FormEvent } from "react";
 import { Link } from "react-router-dom";
-import { api } from "../api/client";
+import { supabase } from "../lib/supabase";
 import toast from "react-hot-toast";
 
 export default function ForgotPassword() {
@@ -12,7 +12,10 @@ export default function ForgotPassword() {
     e.preventDefault();
     setLoading(true);
     try {
-      await api.post("/password/forgot", { email });
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
+      if (error) throw error;
       setSent(true);
     } catch (err) {
       toast.error((err as Error).message);

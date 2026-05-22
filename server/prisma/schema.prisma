@@ -1,6 +1,5 @@
 generator client {
-  provider      = "prisma-client-js"
-  binaryTargets = ["native", "debian-openssl-3.0.x", "debian-openssl-1.1.x"]
+  provider = "prisma-client-js"
 }
 
 datasource db {
@@ -37,51 +36,77 @@ enum PaymentProvider {
 }
 
 model User {
-  id           String   @id @default(uuid())
-  email        String   @unique
-  passwordHash String
-  role         Role     @default(USER)
-  tokenVersion Int      @default(1)
-  orders       Order[]
-  sessions     UserSession[]
-  resetTokens  PasswordResetToken[]
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id        String   @id
+  email     String   @unique
+  role      Role     @default(USER)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  orders Order[]
 }
 
-model UserSession {
-  id        String   @id @default(uuid())
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  sid       String   @unique
-  ip        String?
-  subnet    String?
-  userAgent String?
-  city      String?
-  country   String?
-  createdAt DateTime @default(now())
-  lastSeen  DateTime @default(now())
+model Product {
+  id          String   @id
+  name        String
+  provider    Provider
+  description String
+  priceUsd    Float
+  region      String?
+  specs       Json?
+  stock       Int      @default(0)
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
-  @@index([userId])
-  @@map("user_sessions")
+  orders Order[]
 }
 
-model PasswordResetToken {
-  id        String   @id @default(uuid())
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  token     String   @unique
-  used      Boolean  @default(false)
-  expiresAt DateTime
-  createdAt DateTime @default(now())
+model Order {
+  id              String          @id @default(cuid())
+  userId          String
+  productId       String
+  status          OrderStatus     @default(PENDING)
+  paymentProvider PaymentProvider?
+  paymentChargeId String?
+  credentialId    String?         @unique
+  amountUsd       Float
+  cryptoAddress   String?
+  cryptoAmount    Float?
+  cryptoCurrency  String?
+  cryptoExpiresAt DateTime?
+  cryptoNetwork   String?
+  adminFee        Float?
+  gatewayFee      Float?
+  sellerAmount    Float?
+  paidAt          DateTime?
+  deliveredAt     DateTime?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
 
-  @@index([userId])
-  @@index([token])
-  @@map("password_reset_tokens")
+  user       User       @relation(fields: [userId], references: [id], onDelete: Restrict)
+  product    Product    @relation(fields: [productId], references: [id], onDelete: Restrict)
+  credential Credential? @relation(fields: [credentialId], references: [id], onDelete: SetNull)
+}
+
+model Credential {
+  id        String    @id
+  provider  Provider
+  email     String
+  password  String
+  accessKey String?
+  secretKey String?
+  region    String?
+  specs     Json?
+  claimed   Boolean   @default(false)
+  claimedAt DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  orders Order[]
 }
 
 model AuthEvent {
-  id        String   @id @default(uuid())
+  id        String   @id @default(cuid())
   userId    String?
   email     String?
   event     String
@@ -93,61 +118,4 @@ model AuthEvent {
   @@index([userId])
   @@index([createdAt])
   @@map("auth_events")
-}
-
-model Product {
-  id          String    @id @default(uuid())
-  name        String
-  provider    Provider
-  description String
-  priceUsd    Float
-  region      String?
-  specs       Json?
-  stock       Int       @default(0)
-  active      Boolean   @default(true)
-  orders      Order[]
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-}
-
-model Credential {
-  id         String    @id @default(uuid())
-  provider   Provider
-  email      String
-  password   String
-  accessKey  String?
-  secretKey  String?
-  region     String?
-  specs      Json?
-  claimed    Boolean   @default(false)
-  claimedAt  DateTime?
-  order      Order?
-  createdAt  DateTime  @default(now())
-  updatedAt  DateTime  @updatedAt
-}
-
-model Order {
-  id              String         @id @default(uuid())
-  userId          String
-  user            User           @relation(fields: [userId], references: [id])
-  productId       String
-  product         Product        @relation(fields: [productId], references: [id])
-  status          OrderStatus    @default(PENDING)
-  paymentProvider PaymentProvider?
-  paymentChargeId String?
-  credentialId    String?        @unique
-  credential      Credential?    @relation(fields: [credentialId], references: [id])
-  amountUsd       Float
-  paidAt          DateTime?
-  deliveredAt     DateTime?
-  cryptoAddress   String?
-  cryptoAmount    Float?
-  cryptoCurrency  String?
-  cryptoNetwork   String?
-  cryptoExpiresAt DateTime?
-  adminFee        Float?
-  gatewayFee      Float?
-  sellerAmount    Float?
-  createdAt       DateTime       @default(now())
-  updatedAt       DateTime       @updatedAt
 }

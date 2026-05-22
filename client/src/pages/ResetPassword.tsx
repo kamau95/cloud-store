@@ -1,23 +1,31 @@
-import { useState, FormEvent } from "react";
-import { useNavigate, useSearchParams, Link } from "react-router-dom";
-import { api } from "../api/client";
+import { useState, FormEvent, useEffect } from "react";
+import { useNavigate, Link } from "react-router-dom";
+import { supabase } from "../lib/supabase";
 import toast from "react-hot-toast";
 
 export default function ResetPassword() {
-  const [searchParams] = useSearchParams();
-  const token = searchParams.get("token") || "";
   const [password, setPassword] = useState("");
-  const [done, setDone] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [ready, setReady] = useState(false);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) {
+        setReady(true);
+      }
+    });
+  }, []);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setLoading(true);
     try {
-      await api.post("/password/reset", { token, password });
+      const { error } = await supabase.auth.updateUser({ password });
+      if (error) throw error;
       toast.success("Password reset. Please log in.");
-      setDone(true);
+      await supabase.auth.signOut();
+      navigate("/login");
     } catch (err) {
       toast.error((err as Error).message);
     } finally {
@@ -25,18 +33,14 @@ export default function ResetPassword() {
     }
   };
 
-  if (!token) {
+  if (!ready) {
     return (
       <div className="max-w-md mx-auto px-4 py-20 text-center">
         <h1 className="text-3xl font-bold mb-4">Invalid reset link</h1>
+        <p className="text-gray-400 mb-4">This reset link is invalid or expired.</p>
         <Link to="/forgot-password" className="text-blue-400 hover:underline text-sm">Request a new one</Link>
       </div>
     );
-  }
-
-  if (done) {
-    navigate("/login");
-    return null;
   }
 
   return (

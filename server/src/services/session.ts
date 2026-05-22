@@ -1,78 +1,39 @@
-import { Pool } from "pg";
-import session from "express-session";
-import connectPgSimple from "connect-pg-simple";
-import passport from "passport";
-import { Strategy as LocalStrategy } from "passport-local";
-import argon2 from "argon2";
-import bcrypt from "bcryptjs";
-import { PrismaClient } from "@prisma/client";
+import { createClient } from "@supabase/supabase-js";
+import { createRemoteJWKSet, jwtVerify } from "jose";
 
-const prisma = new PrismaClient();
+const SUPABASE_URL = process.env.SUPABASE_URL || "";
+const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY || "";
+const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
 
-const SESSION_SECRET = process.env.SESSION_SECRET || process.env.JWT_SECRET || "dev-session-secret-change-me";
-
-const pgPool = new Pool({ connectionString: process.env.DATABASE_URL });
-
-const PgStore = connectPgSimple(session);
-
-export const sessionMiddleware = session({
-  store: new PgStore({
-    pool: pgPool,
-    tableName: "user_session_store",
-    createTableIfMissing: true,
-  }),
-  secret: SESSION_SECRET,
-  name: "__Host-sid",
-  resave: false,
-  saveUninitialized: false,
-  cookie: {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "strict",
-    maxAge: 24 * 60 * 60 * 1000,
-  },
+export const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY, {
+  auth: { autoRefreshToken: false, persistSession: false },
 });
 
-passport.use(
-  new LocalStrategy(
-    { usernameField: "email", passwordField: "password" },
-    async (email, password, done) => {
-      try {
-        const user = await prisma.user.findUnique({ where: { email: email.toLowerCase() } });
-        if (!user) return done(null, false, { message: "Invalid email or password" });
-
-        let valid = false;
-        try {
-          valid = await argon2.verify(user.passwordHash, password);
-        } catch {
-          valid = bcrypt.compareSync(password, user.passwordHash);
-        }
-        if (!valid) return done(null, false, { message: "Invalid email or password" });
-
-        return done(null, { id: user.id, userId: user.id, email: user.email, role: user.role, tokenVersion: user.tokenVersion });
-      } catch (err) {
-        return done(err);
-      }
-    }
-  )
-);
-
-passport.serializeUser((user: Express.User, done) => {
-  done(null, { id: user.id, userId: user.id, email: user.email, role: user.role, tokenVersion: user.tokenVersion });
+export const supabaseAnon = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+  auth: { autoRefreshToken: false, persistSession: false },
 });
 
-passport.deserializeUser(async (serialized: Express.User, done) => {
+const JWKS = createRemoteJWKSet(new URL(`${SUPABASE_URL}/auth/v1/.well-known/jwks.json`));
+
+export interface SupabaseJwtPayload {
+  aud: string;
+  sub: string;
+  email: string;
+  phone: string;
+  app_metadata: Record<string, unknown>;
+  user_metadata: Record<string, unknown>;
+  role: string;
+  iat: number;
+  exp: number;
+}
+
+export async function verifyToken(token: string): Promise<SupabaseJwtPayload | null> {
   try {
-    const user = await prisma.user.findUnique({
-      where: { id: serialized.id },
-      select: { id: true, email: true, role: true, tokenVersion: true },
+    const { payload } = await jwtVerify(token, JWKS, {
+      algorithms: ["ES256"],
     });
-    if (!user) return done(null, false);
-    if (user.tokenVersion !== serialized.tokenVersion) return done(null, false);
-    done(null, { id: user.id, userId: user.id, email: user.email, role: user.role, tokenVersion: user.tokenVersion });
-  } catch (err) {
-    done(err);
+    return payload as unknown as SupabaseJwtPayload;
+  } catch {
+    return null;
   }
-});
-
-export { passport, pgPool };
+}

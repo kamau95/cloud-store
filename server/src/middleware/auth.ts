@@ -1,80 +1,55 @@
 import { Response, NextFunction } from "express";
 import { PrismaClient } from "@prisma/client";
 import { AuthRequest } from "../types";
+import { verifyToken } from "../services/session";
 
 const prisma = new PrismaClient();
 
-export function authenticate(req: AuthRequest, res: Response, next: NextFunction): void {
-  if (!req.isAuthenticated || !req.isAuthenticated()) {
+export async function authenticate(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+  const header = req.headers.authorization;
+  if (!header || !header.startsWith("Bearer ")) {
     res.status(401).json({ error: "Not authenticated" });
     return;
   }
+
+  const token = header.slice(7);
+  const payload = await verifyToken(token);
+  if (!payload) {
+    res.status(401).json({ error: "Invalid or expired token" });
+    return;
+  }
+
+  req.user = {
+    userId: payload.sub,
+    id: payload.sub,
+    email: payload.email,
+    role: "USER",
+    tokenVersion: 0,
+  };
   next();
 }
 
 export async function sessionBinding(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
-  if (!req.isAuthenticated || !req.isAuthenticated()) {
-    next();
-    return;
-  }
-
-  const userAgent = req.headers["user-agent"] || "";
-  const ip = req.ip || "";
-  const subnet = ip.includes(".") ? ip.split(".").slice(0, 2).join(".") : ip;
-
-  const sessionData = req.session as any;
-  if (!sessionData.fingerprint) {
-    sessionData.fingerprint = { userAgent, subnet };
-    next();
-    return;
-  }
-
-  const fp = sessionData.fingerprint;
-
-  if (fp.userAgent && userAgent && fp.userAgent !== userAgent) {
-    req.logout(() => {
-      req.session.destroy(() => {
-        res.clearCookie("__Host-sid");
-        res.status(401).json({ error: "Session hijacked — user-agent mismatch" });
-      });
-    });
-    return;
-  }
-
-  if (fp.subnet && subnet && fp.subnet !== subnet) {
-    req.logout(() => {
-      req.session.destroy(() => {
-        res.clearCookie("__Host-sid");
-        res.status(401).json({ error: "Session hijacked — network change detected" });
-      });
-    });
-    return;
-  }
-
   next();
 }
 
 export async function tokenVersionCheck(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
-  if (!req.isAuthenticated || !req.isAuthenticated()) {
+  if (!req.user) {
     next();
     return;
   }
 
   const user = await prisma.user.findUnique({
-    where: { id: req.user!.id },
-    select: { tokenVersion: true },
+    where: { id: req.user.id },
+    select: { role: true },
   });
 
-  if (!user || user.tokenVersion !== (req.user as any).tokenVersion) {
-    req.logout(() => {
-      req.session.destroy(() => {
-        res.clearCookie("__Host-sid");
-        res.status(401).json({ error: "Session expired — please log in again" });
-      });
-    });
+  if (!user) {
+    res.status(401).json({ error: "User not found" });
     return;
   }
 
+  req.user.role = user.role;
   next();
 }
 
