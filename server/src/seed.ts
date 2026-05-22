@@ -4,26 +4,34 @@ import { supabaseAdmin } from "./services/session";
 const prisma = new PrismaClient();
 
 async function ensureUser(email: string, password: string, role: "USER" | "ADMIN" | "SUPER_ADMIN") {
+  const existing = await prisma.user.findUnique({ where: { email } });
+
+  if (existing) {
+    const { data: { users } } = await supabaseAdmin.auth.admin.listUsers();
+    const match = users?.find((u) => u.email === email);
+    if (match && match.id !== existing.id) {
+      await prisma.user.delete({ where: { id: existing.id } });
+      await prisma.user.create({ data: { id: match.id, email, role } });
+    } else if (existing.role !== role) {
+      await prisma.user.update({ where: { id: existing.id }, data: { role } });
+    }
+    return;
+  }
+
   const { data, error } = await supabaseAdmin.auth.admin.createUser({
-    email,
-    password,
-    email_confirm: true,
+    email, password, email_confirm: true,
   });
 
   if (error) {
-    if (error.message.includes("already registered")) {
-      const { data: { users } } = await supabaseAdmin.auth.admin.listUsers();
-      const existing = users?.find((u) => u.email === email);
-      if (existing) {
-        await prisma.user.upsert({
-          where: { id: existing.id },
-          update: { role },
-          create: { id: existing.id, email, role },
-        });
-      }
-      return;
+    const { data: { users } } = await supabaseAdmin.auth.admin.listUsers();
+    const match = users?.find((u) => u.email === email);
+    if (match) {
+      await prisma.user.upsert({
+        where: { id: match.id },
+        update: { role },
+        create: { id: match.id, email, role },
+      });
     }
-    console.error(`Failed to create user ${email}:`, error.message);
     return;
   }
 
