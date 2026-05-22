@@ -35,10 +35,64 @@ async function ensureUser(email: string, password: string, role: "USER" | "ADMIN
   });
 }
 
+async function migrateExistingUsers() {
+  const dbUsers = await prisma.user.findMany();
+
+  for (const dbUser of dbUsers) {
+    try {
+      await firebaseAdmin.auth().getUser(dbUser.id);
+      continue;
+    } catch {
+    }
+
+    try {
+      await firebaseAdmin.auth().getUserByEmail(dbUser.email);
+      const fbUser = await firebaseAdmin.auth().getUserByEmail(dbUser.email);
+      if (dbUser.id !== fbUser.uid) {
+        await prisma.user.delete({ where: { id: dbUser.id } });
+        await prisma.user.create({ data: { id: fbUser.uid, email: dbUser.email, role: dbUser.role } });
+      }
+      continue;
+    } catch {
+    }
+
+    try {
+      const userRecord = await firebaseAdmin.auth().createUser({
+        email: dbUser.email,
+        password: Math.random().toString(36).slice(2, 18),
+        emailVerified: false,
+      });
+
+      if (dbUser.id !== userRecord.uid) {
+        await prisma.user.delete({ where: { id: dbUser.id } });
+        await prisma.user.create({ data: { id: userRecord.uid, email: dbUser.email, role: dbUser.role } });
+      }
+
+      const apiKey = process.env.FIREBASE_API_KEY;
+      if (apiKey) {
+        try {
+          await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:sendOobCode?key=${apiKey}`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ requestType: "PASSWORD_RESET", email: dbUser.email }),
+          });
+        } catch {
+        }
+      }
+
+      console.log(`  Migrated user: ${dbUser.email} (password reset email sent)`);
+    } catch {
+      console.error(`  Failed to migrate user: ${dbUser.email}`);
+    }
+  }
+}
+
 export async function seedDatabase() {
   await ensureUser("admin@cloudstore.com", "admin123", "ADMIN");
   await ensureUser("dev@cloudstore.com", "super123", "SUPER_ADMIN");
   await ensureUser("user@test.com", "user123", "USER");
+
+  await migrateExistingUsers();
 
   const products = [
     {
