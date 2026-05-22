@@ -19,10 +19,16 @@ const PORT = process.env.PORT || 3001;
 
 app.set("trust proxy", 1);
 
+const supabaseUrl = process.env.SUPABASE_URL || "";
+
 app.use(helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
+      connectSrc: ["'self'", ...(supabaseUrl ? [supabaseUrl] : [])],
+      imgSrc: ["'self'", "data:", "blob:"],
+      scriptSrc: ["'self'"],
+      styleSrc: ["'self'", "'unsafe-inline'"],
       frameAncestors: ["'none'"],
     },
   },
