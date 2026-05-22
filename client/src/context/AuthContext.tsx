@@ -90,18 +90,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const register = async (email: string, password: string) => {
     const auth = await getAuthInstance();
-    const cred = await createUserWithEmailAndPassword(auth, email, password);
-    await sendEmailVerification(cred.user);
+    let user: FirebaseUser;
 
-    const token = await cred.user.getIdToken();
+    try {
+      const cred = await createUserWithEmailAndPassword(auth, email, password);
+      user = cred.user;
+    } catch (err: any) {
+      if (err.code === "auth/email-already-in-use") {
+        const cred = await signInWithEmailAndPassword(auth, email, password);
+        user = cred.user;
+      } else {
+        throw err;
+      }
+    }
+
+    await sendEmailVerification(user);
+
+    const token = await user.getIdToken();
     const res = await fetch("/api/auth/register", {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
       body: JSON.stringify({ email }),
     });
     if (!res.ok) {
-      const err = await res.json();
-      throw new Error(err.error || "Registration failed");
+      await signOut(auth);
+      throw new Error("Email already registered. Try resetting your password.");
     }
 
     await signOut(auth);
