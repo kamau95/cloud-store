@@ -4,14 +4,7 @@ import { firebaseAdmin } from "./services/firebase";
 const prisma = new PrismaClient();
 
 async function ensureUser(email: string, password: string, role: "USER" | "ADMIN" | "SUPER_ADMIN") {
-  const existing = await prisma.user.findUnique({ where: { email } });
-
-  if (existing) {
-    if (existing.role !== role) {
-      await prisma.user.update({ where: { id: existing.id }, data: { role } });
-    }
-    return;
-  }
+  let firebaseUid: string;
 
   try {
     const userRecord = await firebaseAdmin.auth().createUser({
@@ -19,22 +12,27 @@ async function ensureUser(email: string, password: string, role: "USER" | "ADMIN
       password,
       emailVerified: true,
     });
-
-    await prisma.user.upsert({
-      where: { id: userRecord.uid },
-      update: { email, role },
-      create: { id: userRecord.uid, email, role },
-    });
+    firebaseUid = userRecord.uid;
   } catch (err: any) {
     if (err.code === "auth/email-already-exists") {
       const userRecord = await firebaseAdmin.auth().getUserByEmail(email);
-      await prisma.user.upsert({
-        where: { id: userRecord.uid },
-        update: { role },
-        create: { id: userRecord.uid, email, role },
-      });
+      firebaseUid = userRecord.uid;
+      await firebaseAdmin.auth().updateUser(firebaseUid, { password, emailVerified: true });
+    } else {
+      return;
     }
   }
+
+  const existing = await prisma.user.findUnique({ where: { email } });
+  if (existing && existing.id !== firebaseUid) {
+    await prisma.user.delete({ where: { id: existing.id } });
+  }
+
+  await prisma.user.upsert({
+    where: { id: firebaseUid },
+    update: { email, role },
+    create: { id: firebaseUid, email, role },
+  });
 }
 
 export async function seedDatabase() {
