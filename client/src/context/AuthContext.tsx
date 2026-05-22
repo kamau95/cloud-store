@@ -69,19 +69,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const register = async (email: string, password: string) => {
-    const sb = await getSupabase();
-    const { error } = await sb.auth.signUp({ email, password });
-    if (error) throw error;
-
-    const token = (await sb.auth.getSession()).data.session?.access_token;
-    if (token) {
-      await fetch("/api/auth/register", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ email, password }),
-      });
+    const res = await fetch("/api/auth/register", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password }),
+    });
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.error || "Registration failed");
     }
-    await refreshUser();
+    await login(email, password);
   };
 
   const logout = async () => {

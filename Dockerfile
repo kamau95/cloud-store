@@ -6,6 +6,7 @@ COPY client/ ./
 RUN npm run build
 
 FROM node:20-bookworm-slim AS server-build
+RUN apt-get update -qq && apt-get install -y -qq openssl ca-certificates && rm -rf /var/lib/apt/lists/*
 WORKDIR /app/server
 COPY server/package*.json ./
 RUN npm install
