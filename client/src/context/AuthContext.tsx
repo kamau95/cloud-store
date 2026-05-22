@@ -1,6 +1,14 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
+import {
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+  signOut,
+  sendEmailVerification,
+  onAuthStateChanged,
+  User as FirebaseUser,
+} from "firebase/auth";
 import { User } from "../types";
-import { getSupabase } from "../lib/supabase";
+import { getAuthInstance } from "../lib/firebase";
 
 interface AuthContextValue {
   user: User | null;
@@ -17,9 +25,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
+  const getToken = async (): Promise<string | null> => {
+    const auth = await getAuthInstance();
+    const fbUser = auth.currentUser;
+    if (fbUser) {
+      try {
+        return await fbUser.getIdToken();
+      } catch {
+        return null;
+      }
+    }
+    return null;
+  };
+
   const refreshUser = async () => {
-    const sb = await getSupabase();
-    const token = (await sb.auth.getSession()).data.session?.access_token;
+    const token = await getToken();
     if (!token) {
       setUser(null);
       return;
@@ -40,49 +60,56 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let cancelled = false;
-    getSupabase().then((sb) => {
+    getAuthInstance().then((auth) => {
       if (cancelled) return;
-      sb.auth.getSession().then(({ data: { session } }) => {
-        if (session) {
-          refreshUser().finally(() => setLoading(false));
+      const unsubscribe = onAuthStateChanged(auth, (fbUser: FirebaseUser | null) => {
+        if (fbUser) {
+          refreshUser().finally(() => {
+            if (!cancelled) setLoading(false);
+          });
         } else {
-          setLoading(false);
+          if (!cancelled) {
+            setUser(null);
+            setLoading(false);
+          }
         }
       });
-
-      sb.auth.onAuthStateChange((_event, session) => {
-        if (session) {
-          refreshUser();
-        } else {
-          setUser(null);
-        }
-      });
+      return () => {
+        unsubscribe();
+        cancelled = true;
+      };
     });
     return () => { cancelled = true; };
   }, []);
 
   const login = async (email: string, password: string) => {
-    const sb = await getSupabase();
-    const { data, error } = await sb.auth.signInWithPassword({ email, password });
-    if (error) throw error;
+    const auth = await getAuthInstance();
+    await signInWithEmailAndPassword(auth, email, password);
     await refreshUser();
   };
 
   const register = async (email: string, password: string) => {
+    const auth = await getAuthInstance();
+    const cred = await createUserWithEmailAndPassword(auth, email, password);
+    await sendEmailVerification(cred.user);
+
+    const token = await cred.user.getIdToken();
     const res = await fetch("/api/auth/register", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password }),
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ email }),
     });
     if (!res.ok) {
       const err = await res.json();
       throw new Error(err.error || "Registration failed");
     }
+
+    await signOut(auth);
   };
 
   const logout = async () => {
-    const sb = await getSupabase();
-    await sb.auth.signOut();
+    const auth = await getAuthInstance();
+    await signOut(auth);
     setUser(null);
   };
 

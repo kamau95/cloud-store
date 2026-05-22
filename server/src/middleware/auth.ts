@@ -1,7 +1,7 @@
 import { Response, NextFunction } from "express";
 import { PrismaClient } from "@prisma/client";
 import { AuthRequest } from "../types";
-import { verifyToken } from "../services/session";
+import { verifyIdToken, firebaseAdmin } from "../services/firebase";
 
 const prisma = new PrismaClient();
 
@@ -13,16 +13,29 @@ export async function authenticate(req: AuthRequest, res: Response, next: NextFu
   }
 
   const token = header.slice(7);
-  const payload = await verifyToken(token);
-  if (!payload) {
+  const decoded = await verifyIdToken(token);
+  if (!decoded) {
     res.status(401).json({ error: "Invalid or expired token" });
     return;
   }
 
+  if (!decoded.email_verified) {
+    try {
+      const userRecord = await firebaseAdmin.auth().getUser(decoded.uid);
+      if (!userRecord.emailVerified) {
+        res.status(403).json({ error: "Email not confirmed. Check your inbox." });
+        return;
+      }
+    } catch {
+      res.status(500).json({ error: "Failed to verify email status" });
+      return;
+    }
+  }
+
   req.user = {
-    userId: payload.sub,
-    id: payload.sub,
-    email: payload.email,
+    userId: decoded.uid,
+    id: decoded.uid,
+    email: decoded.email || "",
     role: "USER",
     tokenVersion: 0,
   };

@@ -2,14 +2,13 @@ import { Response } from "express";
 import { PrismaClient } from "@prisma/client";
 import { z } from "zod";
 import { AuthRequest } from "../types";
-import { supabaseAdmin, supabaseAnon } from "../services/session";
+import { firebaseAdmin } from "../services/firebase";
 import { logEvent } from "../services/audit";
 
 const prisma = new PrismaClient();
 
 export const registerSchema = z.object({
   email: z.string().email(),
-  password: z.string().min(8, "Password must be at least 8 characters"),
 });
 
 export const loginSchema = z.object({
@@ -18,82 +17,74 @@ export const loginSchema = z.object({
 });
 
 export async function register(req: AuthRequest, res: Response): Promise<void> {
-  const { email, password } = req.body;
-  const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
-
-  const { data, error } = await supabaseAnon.auth.signUp({
-    email: email.toLowerCase(),
-    password,
-    options: { emailRedirectTo: `${frontendUrl}/login` },
-  });
-
-  if (error) {
-    if (error.message.includes("already registered")) {
-      res.status(409).json({ error: "Email already registered" });
-      return;
-    }
-    res.status(500).json({ error: error.message });
+  if (!req.user) {
+    res.status(401).json({ error: "Not authenticated" });
     return;
   }
 
-  if (data.user) {
+  const { email } = req.body;
+
+  try {
+    const userRecord = await firebaseAdmin.auth().getUser(req.user.id);
+
     await prisma.user.upsert({
-      where: { id: data.user.id },
+      where: { id: userRecord.uid },
       update: { email: email.toLowerCase() },
       create: {
-        id: data.user.id,
+        id: userRecord.uid,
         email: email.toLowerCase(),
         role: "USER",
       },
     });
 
-    logEvent({ userId: data.user.id, email: email.toLowerCase(), event: "register", ip: req.ip, userAgent: req.headers["user-agent"] });
-  }
+    logEvent({ userId: userRecord.uid, email: email.toLowerCase(), event: "register", ip: req.ip, userAgent: req.headers["user-agent"] });
 
-  res.status(201).json({ message: "Check your email for confirmation link" });
+    res.status(201).json({ message: "Check your email for confirmation link" });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
 }
 
 export async function login(req: AuthRequest, res: Response): Promise<void> {
   const { email, password } = req.body;
 
-  const { data, error } = await supabaseAnon.auth.signInWithPassword({
-    email: email.toLowerCase(),
-    password,
-  });
+  try {
+    const userRecord = await firebaseAdmin.auth().getUserByEmail(email.toLowerCase());
 
-  if (error || !data.session) {
-    logEvent({ email: email.toLowerCase(), event: "login_failed", ip: req.ip, userAgent: req.headers["user-agent"] });
-    res.status(401).json({ error: "Invalid email or password" });
-    return;
-  }
+    if (!userRecord.emailVerified) {
+      logEvent({ email: email.toLowerCase(), event: "login_failed_unconfirmed", ip: req.ip, userAgent: req.headers["user-agent"] });
+      res.status(403).json({ error: "Email not confirmed. Check your inbox." });
+      return;
+    }
 
-  const user = await prisma.user.findUnique({
-    where: { id: data.user.id },
-    select: { id: true, email: true, role: true },
-  });
-
-  if (!user) {
-    await prisma.user.create({
-      data: { id: data.user.id, email: email.toLowerCase() },
+    const user = await prisma.user.findUnique({
+      where: { id: userRecord.uid },
+      select: { id: true, email: true, role: true },
     });
+
+    if (!user) {
+      await prisma.user.create({
+        data: { id: userRecord.uid, email: email.toLowerCase() },
+      });
+    }
+
+    const profile = user || { id: userRecord.uid, email: email.toLowerCase(), role: "USER" as const };
+
+    logEvent({ userId: profile.id, email: profile.email, event: "login", ip: req.ip, userAgent: req.headers["user-agent"] });
+
+    res.json({ user: profile });
+  } catch (err: any) {
+    if (err.code === "auth/user-not-found") {
+      res.status(401).json({ error: "Invalid email or password" });
+      return;
+    }
+    res.status(500).json({ error: err.message });
   }
-
-  const profile = user || { id: data.user.id, email: email.toLowerCase(), role: "USER" as const };
-
-  logEvent({ userId: profile.id, email: profile.email, event: "login", ip: req.ip, userAgent: req.headers["user-agent"] });
-
-  res.json({
-    accessToken: data.session.access_token,
-    refreshToken: data.session.refresh_token,
-    expiresAt: data.session.expires_at,
-    user: profile,
-  });
 }
 
 export async function logout(req: AuthRequest, res: Response): Promise<void> {
-  const header = req.headers.authorization;
-  if (header?.startsWith("Bearer ")) {
-    await supabaseAdmin.auth.admin.signOut(req.user!.id);
+  if (req.user) {
+    await firebaseAdmin.auth().revokeRefreshTokens(req.user.id);
   }
   logEvent({ userId: req.user?.id, email: req.user?.email, event: "logout", ip: req.ip, userAgent: req.headers["user-agent"] });
   res.json({ ok: true });

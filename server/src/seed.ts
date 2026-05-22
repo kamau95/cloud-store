@@ -1,5 +1,5 @@
 import { PrismaClient, Provider } from "@prisma/client";
-import { supabaseAdmin } from "./services/session";
+import { firebaseAdmin } from "./services/firebase";
 
 const prisma = new PrismaClient();
 
@@ -7,40 +7,34 @@ async function ensureUser(email: string, password: string, role: "USER" | "ADMIN
   const existing = await prisma.user.findUnique({ where: { email } });
 
   if (existing) {
-    const { data: { users } } = await supabaseAdmin.auth.admin.listUsers();
-    const match = users?.find((u) => u.email === email);
-    if (match && match.id !== existing.id) {
-      await prisma.user.delete({ where: { id: existing.id } });
-      await prisma.user.create({ data: { id: match.id, email, role } });
-    } else if (existing.role !== role) {
+    if (existing.role !== role) {
       await prisma.user.update({ where: { id: existing.id }, data: { role } });
     }
     return;
   }
 
-  const { data, error } = await supabaseAdmin.auth.admin.createUser({
-    email, password, email_confirm: true,
-  });
+  try {
+    const userRecord = await firebaseAdmin.auth().createUser({
+      email,
+      password,
+      emailVerified: true,
+    });
 
-  if (error) {
-    const { data: { users } } = await supabaseAdmin.auth.admin.listUsers();
-    const match = users?.find((u) => u.email === email);
-    if (match) {
+    await prisma.user.upsert({
+      where: { id: userRecord.uid },
+      update: { email, role },
+      create: { id: userRecord.uid, email, role },
+    });
+  } catch (err: any) {
+    if (err.code === "auth/email-already-exists") {
+      const userRecord = await firebaseAdmin.auth().getUserByEmail(email);
       await prisma.user.upsert({
-        where: { id: match.id },
+        where: { id: userRecord.uid },
         update: { role },
-        create: { id: match.id, email, role },
+        create: { id: userRecord.uid, email, role },
       });
     }
-    return;
   }
-
-  const uid = data.user!.id;
-  await prisma.user.upsert({
-    where: { id: uid },
-    update: { email, role },
-    create: { id: uid, email, role },
-  });
 }
 
 export async function seedDatabase() {

@@ -1,11 +1,18 @@
-import { getSupabase } from "../lib/supabase";
+import { getAuthInstance } from "../lib/firebase";
 
 const API_BASE = "/api";
 
 async function getToken(): Promise<string | null> {
-  const sb = await getSupabase();
-  const { data } = await sb.auth.getSession();
-  return data.session?.access_token || null;
+  const auth = await getAuthInstance();
+  const user = auth.currentUser;
+  if (user) {
+    try {
+      return await user.getIdToken();
+    } catch {
+      return null;
+    }
+  }
+  return null;
 }
 
 async function request<T>(

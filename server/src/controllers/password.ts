@@ -1,6 +1,6 @@
 import { Response } from "express";
 import { z } from "zod";
-import { supabaseAdmin, supabaseAnon } from "../services/session";
+import { firebaseAdmin } from "../services/firebase";
 import { logEvent } from "../services/audit";
 import { AuthRequest } from "../types";
 
@@ -15,14 +15,11 @@ export const resetSchema = z.object({
 
 export async function forgotPassword(req: AuthRequest, res: Response): Promise<void> {
   const { email } = req.body;
-  const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
 
-  const { error } = await supabaseAnon.auth.resetPasswordForEmail(email.toLowerCase(), {
-    redirectTo: `${frontendUrl}/reset-password`,
-  });
-
-  if (error) {
-    console.error("Password reset error:", error.message);
+  try {
+    await firebaseAdmin.auth().generatePasswordResetLink(email.toLowerCase());
+  } catch (err: any) {
+    console.error("Password reset error:", err.message);
   }
 
   logEvent({ email: email.toLowerCase(), event: "password_reset_requested", ip: req.ip, userAgent: req.headers["user-agent"] });
@@ -32,15 +29,11 @@ export async function forgotPassword(req: AuthRequest, res: Response): Promise<v
 export async function resetPassword(req: AuthRequest, res: Response): Promise<void> {
   const { token, password } = req.body;
 
-  const { data, error } = await supabaseAdmin.auth.admin.updateUserById(token, {
-    password,
-  });
-
-  if (error) {
-    res.status(400).json({ error: error.message });
-    return;
+  try {
+    await firebaseAdmin.auth().updateUser(token, { password });
+    logEvent({ userId: token, event: "password_reset_completed", ip: req.ip, userAgent: req.headers["user-agent"] });
+    res.json({ ok: true });
+  } catch (err: any) {
+    res.status(400).json({ error: err.message });
   }
-
-  logEvent({ userId: data.user.id, email: data.user.email, event: "password_reset_completed", ip: req.ip, userAgent: req.headers["user-agent"] });
-  res.json({ ok: true });
 }

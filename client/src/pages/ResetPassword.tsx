@@ -1,31 +1,32 @@
 import { useState, FormEvent, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { getSupabase } from "../lib/supabase";
+import { confirmPasswordReset, verifyPasswordResetCode } from "firebase/auth";
+import { getAuthInstance } from "../lib/firebase";
 import toast from "react-hot-toast";
 
 export default function ResetPassword() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [ready, setReady] = useState(false);
+  const [oobCode, setOobCode] = useState("");
   const navigate = useNavigate();
 
   useEffect(() => {
-    getSupabase().then((sb) => {
-      sb.auth.getSession().then(({ data: { session } }) => {
-        if (session) setReady(true);
-      });
-    });
+    const params = new URLSearchParams(window.location.search);
+    const code = params.get("oobCode");
+    if (code) {
+      setOobCode(code);
+      setReady(true);
+    }
   }, []);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setLoading(true);
     try {
-      const sb = await getSupabase();
-      const { error } = await sb.auth.updateUser({ password });
-      if (error) throw error;
+      const auth = await getAuthInstance();
+      await confirmPasswordReset(auth, oobCode, password);
       toast.success("Password reset. Please log in.");
-      await sb.auth.signOut();
       navigate("/login");
     } catch (err) {
       toast.error((err as Error).message);

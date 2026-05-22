@@ -19,13 +19,18 @@ const PORT = process.env.PORT || 3001;
 
 app.set("trust proxy", 1);
 
-const supabaseUrl = process.env.SUPABASE_URL || "";
+const firebaseAuthDomain = process.env.FIREBASE_AUTH_DOMAIN || "";
+const firebaseProjectId = process.env.FIREBASE_PROJECT_ID || "";
 
 app.use(helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
-      connectSrc: ["'self'", ...(supabaseUrl ? [supabaseUrl] : [])],
+      connectSrc: [
+        "'self'",
+        ...(firebaseAuthDomain ? [`https://${firebaseAuthDomain}`] : []),
+        ...(firebaseProjectId ? [`https://identitytoolkit.googleapis.com`, `https://securetoken.googleapis.com`] : []),
+      ],
       imgSrc: ["'self'", "data:", "blob:"],
       scriptSrc: ["'self'"],
       styleSrc: ["'self'", "'unsafe-inline'"],
@@ -56,7 +61,7 @@ app.use(express.json());
 app.use(tokenVersionCheck);
 
 app.get("/api/health", (_req, res) => {
-  res.json({ status: "ok", timestamp: new Date().toISOString(), version: "supabase-auth" });
+  res.json({ status: "ok", timestamp: new Date().toISOString(), version: "firebase-auth" });
 });
 
 app.use("/api/auth", authRoutes);

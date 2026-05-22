@@ -1,5 +1,7 @@
 import { useState, FormEvent } from "react";
 import { Link } from "react-router-dom";
+import { sendPasswordResetEmail } from "firebase/auth";
+import { getAuthInstance } from "../lib/firebase";
 import toast from "react-hot-toast";
 
 export default function ForgotPassword() {
@@ -11,15 +13,8 @@ export default function ForgotPassword() {
     e.preventDefault();
     setLoading(true);
     try {
-      const res = await fetch("/api/password/forgot", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email }),
-      });
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.error || "Something went wrong");
-      }
+      const auth = await getAuthInstance();
+      await sendPasswordResetEmail(auth, email);
       setSent(true);
     } catch (err) {
       toast.error((err as Error).message);
