@@ -69,7 +69,7 @@ app.use("/api/orders", orderRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/password", passwordRoutes);
 
-const adminPath = process.env.ADMIN_PATH;
+const adminPath = process.env.ROOT_PATH;
 if (process.env.NODE_ENV === "production") {
   const clientDist = path.join(__dirname, "../../client/dist");
   app.use(express.static(clientDist));
