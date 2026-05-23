@@ -16,6 +16,7 @@ export default function AdminDashboard() {
   const { user } = useAuth();
   const [fees, setFees] = useState<FeeSummary | null>(null);
   const isSuper = user?.role === "TOP";
+  const linkPrefix = isSuper ? "" : "/admin";
 
   useEffect(() => {
     if (isSuper) {
@@ -72,7 +73,7 @@ export default function AdminDashboard() {
 
       <div className="grid md:grid-cols-3 gap-6">
         <Link
-          to="/admin/products"
+          to={`${linkPrefix}/products`}
           className="border border-gray-800 rounded-xl p-6 hover:border-gray-700 transition"
         >
           <h2 className="text-lg font-semibold mb-2">Products</h2>
@@ -81,7 +82,7 @@ export default function AdminDashboard() {
           </p>
         </Link>
         <Link
-          to="/admin/orders"
+          to={`${linkPrefix}/orders`}
           className="border border-gray-800 rounded-xl p-6 hover:border-gray-700 transition"
         >
           <h2 className="text-lg font-semibold mb-2">Orders</h2>
@@ -90,7 +91,7 @@ export default function AdminDashboard() {
           </p>
         </Link>
         <Link
-          to="/admin/accounts"
+          to={`${linkPrefix}/accounts`}
           className="border border-gray-800 rounded-xl p-6 hover:border-gray-700 transition"
         >
           <h2 className="text-lg font-semibold mb-2">Accounts</h2>
@@ -100,7 +101,7 @@ export default function AdminDashboard() {
         </Link>
         {isSuper && (
           <Link
-            to="/admin/users"
+            to={`${linkPrefix}/users`}
             className="border border-gray-800 rounded-xl p-6 hover:border-gray-700 transition"
           >
             <h2 className="text-lg font-semibold mb-2">Users</h2>
