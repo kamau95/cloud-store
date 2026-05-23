@@ -1,7 +1,5 @@
-import { useEffect, useState } from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { getAuthInstance } from "../lib/firebase";
-import { onAuthStateChanged, User as FirebaseUser } from "firebase/auth";
+import { useAuth } from "../context/AuthContext";
 import AdminLogin from "./pages/Login";
 import AdminDashboard from "../pages/AdminDashboard";
 import AdminProducts from "../pages/AdminProducts";
@@ -12,49 +10,8 @@ import Forbidden from "../pages/Forbidden";
 
 const base = "/" + (window.location.pathname.split("/").filter(Boolean)[0] || "admin");
 
-function useAdminAuth() {
-  const [user, setUser] = useState<{ id: string; email: string; role: string } | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    let cancelled = false;
-    getAuthInstance().then((auth) => {
-      if (cancelled) return;
-      const unsubscribe = onAuthStateChanged(auth, async (fbUser: FirebaseUser | null) => {
-        if (fbUser) {
-          const token = await fbUser.getIdToken();
-          try {
-            const res = await fetch("/api/auth/me", {
-              headers: { Authorization: `Bearer ${token}` },
-            });
-            if (res.ok) {
-              const profile = await res.json();
-              if (!cancelled) {
-                setUser(profile);
-                setLoading(false);
-                return;
-              }
-            }
-          } catch {}
-        }
-        if (!cancelled) {
-          setUser(null);
-          setLoading(false);
-        }
-      });
-      return () => {
-        unsubscribe();
-        cancelled = true;
-      };
-    });
-    return () => { cancelled = true; };
-  }, []);
-
-  return { user, loading };
-}
-
 function AuthGuard({ children }: { children: React.ReactNode }) {
-  const { user, loading } = useAdminAuth();
+  const { user, loading } = useAuth();
   if (loading) return <div className="flex items-center justify-center min-h-screen"><div className="animate-spin h-8 w-8 border-2 border-blue-500 border-t-transparent rounded-full" /></div>;
   if (!user) return <Navigate to="/login" replace />;
   if (user.role !== "TOP") return <Forbidden />;
