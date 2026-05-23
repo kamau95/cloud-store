@@ -29,7 +29,11 @@ function useAdminAuth() {
             });
             if (res.ok) {
               const profile = await res.json();
-              if (!cancelled) setUser(profile);
+              if (!cancelled) {
+                setUser(profile);
+                setLoading(false);
+                return;
+              }
             }
           } catch {}
         }
