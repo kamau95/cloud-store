@@ -94,15 +94,9 @@ app.use((err: Error, _req: express.Request, res: express.Response, _next: expres
   res.status(500).json({ error: "Internal server error" });
 });
 
-seedDatabase()
-  .then(() => {
-    app.listen(PORT, () => {
-      console.log(`Server running on http://localhost:${PORT}`);
-    });
-  })
-  .catch((err) => {
-    console.error("Seed failed, starting server anyway:", err);
-    app.listen(PORT, () => {
-      console.log(`Server running on http://localhost:${PORT}`);
-    });
+app.listen(PORT, () => {
+  console.log(`Server running on http://localhost:${PORT}`);
+  seedDatabase().catch((err) => {
+    console.error("Seed failed:", err);
   });
+});
