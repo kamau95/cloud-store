@@ -100,18 +100,23 @@ export async function seedDatabase() {
   await ensureUser("user@test.com", "user123", "LOW");
 
   const superEmail = process.env.SEED_SUPER_EMAIL;
+  const superPassword = process.env.SUPER_ADMIN_PASSWORD;
   if (superEmail) {
-    const tempPassword = Math.random().toString(36).slice(2, 18);
-    await ensureUser(superEmail, tempPassword, "TOP");
-    const apiKey = process.env.FIREBASE_API_KEY;
-    if (apiKey) {
-      await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:sendOobCode?key=${apiKey}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ requestType: "PASSWORD_RESET", email: superEmail }),
-      }).catch(() => {});
+    const password = superPassword || Math.random().toString(36).slice(2, 18);
+    await ensureUser(superEmail, password, "TOP");
+    if (!superPassword) {
+      const apiKey = process.env.FIREBASE_API_KEY;
+      if (apiKey) {
+        await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:sendOobCode?key=${apiKey}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ requestType: "PASSWORD_RESET", email: superEmail }),
+        }).catch(() => {});
+      }
+      console.log(`Super admin ${superEmail} created. Password reset email sent.`);
+    } else {
+      console.log(`Super admin ${superEmail} created with configured password.`);
     }
-    console.log(`Super admin ${superEmail} created. Password reset email sent.`);
   }
 
   await migrateExistingUsers();
