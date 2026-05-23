@@ -29,7 +29,7 @@ export default function AdminLogin() {
       }
 
       toast.success("Logged in");
-      navigate("dashboard");
+      navigate("/dashboard");
     } catch (err) {
       toast.error(friendlyError(err));
     } finally {
