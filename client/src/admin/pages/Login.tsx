@@ -1,7 +1,7 @@
 import { useState, FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { getAuthInstance } from "../../lib/firebase";
-import { signInWithEmailAndPassword } from "firebase/auth";
+import { signInWithEmailAndPassword, sendPasswordResetEmail } from "firebase/auth";
 import { friendlyError } from "../../lib/errors";
 import toast from "react-hot-toast";
 
@@ -70,6 +70,24 @@ export default function AdminLogin() {
             {loading ? "Logging in..." : "Login"}
           </button>
         </form>
+        <div className="text-center mt-4">
+          <button
+            type="button"
+            onClick={async () => {
+              if (!email) { toast.error("Enter your email first"); return; }
+              try {
+                const auth = await getAuthInstance();
+                await sendPasswordResetEmail(auth, email);
+                toast.success("Reset link sent. Check your inbox.");
+              } catch (err) {
+                toast.error(friendlyError(err));
+              }
+            }}
+            className="text-sm text-blue-400 hover:underline"
+          >
+            Forgot password?
+          </button>
+        </div>
       </div>
     </div>
   );
