@@ -23,8 +23,8 @@ export default function AdminLogin() {
         headers: { Authorization: `Bearer ${token}` },
       });
       const profile = await res.json();
-      if (profile.role !== "MID" && profile.role !== "TOP") {
-        toast.error("Access denied. Admin privileges required.");
+      if (profile.role !== "TOP") {
+        toast.error("Access denied. Super admin privileges required.");
         return;
       }
 
