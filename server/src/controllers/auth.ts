@@ -102,10 +102,22 @@ export async function getMe(req: AuthRequest, res: Response): Promise<void> {
   });
 
   if (!user) {
-    user = await prisma.user.create({
-      data: { id: req.user.id, email: req.user.email.toLowerCase() },
-      select: { id: true, email: true, role: true, createdAt: true },
-    });
+    try {
+      user = await prisma.user.create({
+        data: { id: req.user.id, email: req.user.email.toLowerCase() },
+        select: { id: true, email: true, role: true, createdAt: true },
+      });
+    } catch (err: any) {
+      if (err.code === "P2002") {
+        user = await prisma.user.update({
+          where: { email: req.user.email.toLowerCase() },
+          data: { id: req.user.id },
+          select: { id: true, email: true, role: true, createdAt: true },
+        });
+      } else {
+        throw err;
+      }
+    }
   }
 
   res.json(user);

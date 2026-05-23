@@ -13,6 +13,10 @@ import adminRoutes from "./routes/admin";
 import passwordRoutes from "./routes/password";
 import { seedDatabase } from "./seed";
 
+process.on("unhandledRejection", (err) => {
+  console.error("Unhandled rejection:", err);
+});
+
 const app = express();
 const PORT = process.env.PORT || 3001;
 
