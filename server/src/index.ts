@@ -11,7 +11,6 @@ import orderRoutes from "./routes/orders";
 import webhookRoutes from "./routes/webhooks";
 import adminRoutes from "./routes/admin";
 import passwordRoutes from "./routes/password";
-import sessionRoutes from "./routes/sessions";
 import { seedDatabase } from "./seed";
 
 const app = express();
@@ -69,7 +68,6 @@ app.use("/api/products", productRoutes);
 app.use("/api/orders", orderRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/password", passwordRoutes);
-app.use("/api/sessions", sessionRoutes);
 
 if (process.env.NODE_ENV === "production") {
   const clientDist = path.join(__dirname, "../../client/dist");

@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import { PrismaClient } from "@prisma/client";
 import * as vault from "../services/vault";
+import { sendOrderConfirmation, sendDeliveryNotification } from "../services/email";
 
 const prisma = new PrismaClient();
 
@@ -55,7 +56,7 @@ async function processPayment(
 ): Promise<void> {
   const order = await prisma.order.findUnique({
     where: { id: orderId },
-    include: { product: true },
+    include: { product: true, user: { select: { email: true } } },
   });
 
   if (!order) {
@@ -78,6 +79,8 @@ async function processPayment(
     },
   });
 
+  sendOrderConfirmation(order.user.email, orderId, order.product.name, order.amountUsd).catch(() => {});
+
   const reserved = await vault.reserveCredential(order.product.provider);
   if (!reserved) {
     console.error(`No available credentials for ${order.product.provider}, order ${orderId} will need manual delivery`);
@@ -97,6 +100,8 @@ async function processPayment(
     where: { id: order.productId },
     data: { stock: { decrement: 1 } },
   });
+
+  sendDeliveryNotification(order.user.email, orderId, order.product.name).catch(() => {});
 
   console.log(`Order ${orderId} auto-delivered via ${provider} payment ${chargeId}`);
 }

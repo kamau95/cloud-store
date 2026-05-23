@@ -3,6 +3,7 @@ import { useNavigate, Link } from "react-router-dom";
 import { confirmPasswordReset, verifyPasswordResetCode } from "firebase/auth";
 import { getAuthInstance } from "../lib/firebase";
 import toast from "react-hot-toast";
+import { friendlyError } from "../lib/errors";
 
 export default function ResetPassword() {
   const [password, setPassword] = useState("");
@@ -29,7 +30,7 @@ export default function ResetPassword() {
       toast.success("Password reset. Please log in.");
       navigate("/login");
     } catch (err) {
-      toast.error((err as Error).message);
+      toast.error(friendlyError(err));
     } finally {
       setLoading(false);
     }

@@ -3,6 +3,8 @@ import { PrismaClient } from "@prisma/client";
 import { z } from "zod";
 import { AuthRequest } from "../types";
 import * as vault from "../services/vault";
+import { firebaseAdmin } from "../services/firebase";
+import { sendDeliveryNotification } from "../services/email";
 
 const prisma = new PrismaClient();
 
@@ -87,12 +89,15 @@ export async function deliverOrder(req: AuthRequest, res: Response): Promise<voi
       deliveredAt: new Date(),
       credentialId: reserved.id,
     },
+    include: { user: { select: { email: true } } },
   });
 
   await prisma.product.update({
     where: { id: order.productId },
     data: { stock: { decrement: 1 } },
   });
+
+  sendDeliveryNotification(updated.user.email, order.id, order.product.name).catch(() => {});
 
   res.json(updated);
 }
@@ -195,9 +200,19 @@ export async function updateUserRole(req: AuthRequest, res: Response): Promise<v
   const { role } = req.body;
   const { id } = req.params;
 
+  if (req.user?.id === id) {
+    res.status(400).json({ error: "Cannot change your own role" });
+    return;
+  }
+
   const user = await prisma.user.findUnique({ where: { id } });
   if (!user) {
     res.status(404).json({ error: "User not found" });
+    return;
+  }
+
+  if (role === "TOP") {
+    res.status(400).json({ error: "Cannot promote to TOP via this endpoint" });
     return;
   }
 
@@ -208,6 +223,81 @@ export async function updateUserRole(req: AuthRequest, res: Response): Promise<v
   });
 
   res.json(updated);
+}
+
+export const inviteAdminSchema = z.object({
+  email: z.string().email(),
+});
+
+export async function inviteAdmin(req: AuthRequest, res: Response): Promise<void> {
+  const { email } = req.body;
+
+  const existing = await prisma.user.findUnique({ where: { email } });
+  if (existing) {
+    await prisma.user.update({
+      where: { id: existing.id },
+      data: { role: "MID" },
+    });
+    res.json({ message: "User promoted to admin" });
+    return;
+  }
+
+  let firebaseUid: string;
+  try {
+    const userRecord = await firebaseAdmin.auth().createUser({
+      email,
+      password: Math.random().toString(36).slice(2, 18),
+      emailVerified: false,
+    });
+    firebaseUid = userRecord.uid;
+  } catch (err: any) {
+    if (err.code === "auth/email-already-exists") {
+      const userRecord = await firebaseAdmin.auth().getUserByEmail(email);
+      firebaseUid = userRecord.uid;
+    } else {
+      res.status(500).json({ error: "Failed to create Firebase user" });
+      return;
+    }
+  }
+
+  await prisma.user.upsert({
+    where: { id: firebaseUid },
+    update: { email, role: "MID" },
+    create: { id: firebaseUid, email, role: "MID" },
+  });
+
+  const apiKey = process.env.FIREBASE_API_KEY;
+  if (apiKey) {
+    await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:sendOobCode?key=${apiKey}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ requestType: "PASSWORD_RESET", email }),
+    }).catch(() => {});
+  }
+
+  res.json({ message: "Admin invited. Password reset email sent." });
+}
+
+export async function deleteUser(req: AuthRequest, res: Response): Promise<void> {
+  const { id } = req.params;
+
+  if (req.user?.id === id) {
+    res.status(400).json({ error: "Cannot demote yourself" });
+    return;
+  }
+
+  const user = await prisma.user.findUnique({ where: { id } });
+  if (!user) {
+    res.status(404).json({ error: "User not found" });
+    return;
+  }
+
+  await prisma.user.update({
+    where: { id },
+    data: { role: "LOW" },
+  });
+
+  res.json({ message: "User demoted to LOW" });
 }
 
 export async function listAccountPool(req: AuthRequest, res: Response): Promise<void> {

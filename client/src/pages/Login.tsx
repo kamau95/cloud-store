@@ -2,6 +2,7 @@ import { useState, FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import toast from "react-hot-toast";
+import { friendlyError } from "../lib/errors";
 
 export default function Login() {
   const [email, setEmail] = useState("");
@@ -18,7 +19,7 @@ export default function Login() {
       toast.success("Logged in");
       navigate("/products");
     } catch (err) {
-      toast.error((err as Error).message);
+      toast.error(friendlyError(err));
     } finally {
       setLoading(false);
     }

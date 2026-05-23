@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { sendPasswordResetEmail } from "firebase/auth";
 import { getAuthInstance } from "../lib/firebase";
 import toast from "react-hot-toast";
+import { friendlyError } from "../lib/errors";
 
 export default function ForgotPassword() {
   const [email, setEmail] = useState("");
@@ -17,7 +18,7 @@ export default function ForgotPassword() {
       await sendPasswordResetEmail(auth, email);
       setSent(true);
     } catch (err) {
-      toast.error((err as Error).message);
+      toast.error(friendlyError(err));
     } finally {
       setLoading(false);
     }
