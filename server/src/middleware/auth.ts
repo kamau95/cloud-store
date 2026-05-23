@@ -32,11 +32,16 @@ export async function authenticate(req: AuthRequest, res: Response, next: NextFu
     }
   }
 
+  const dbUser = await prisma.user.findUnique({
+    where: { id: decoded.uid },
+    select: { role: true },
+  });
+
   req.user = {
     userId: decoded.uid,
     id: decoded.uid,
     email: decoded.email || "",
-    role: "LOW",
+    role: dbUser?.role || "LOW",
     tokenVersion: 0,
   };
   next();
