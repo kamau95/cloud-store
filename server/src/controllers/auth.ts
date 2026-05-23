@@ -96,14 +96,16 @@ export async function getMe(req: AuthRequest, res: Response): Promise<void> {
     return;
   }
 
-  const user = await prisma.user.findUnique({
+  let user = await prisma.user.findUnique({
     where: { id: req.user.id },
     select: { id: true, email: true, role: true, createdAt: true },
   });
 
   if (!user) {
-    res.status(404).json({ error: "User not found" });
-    return;
+    user = await prisma.user.create({
+      data: { id: req.user.id, email: req.user.email.toLowerCase() },
+      select: { id: true, email: true, role: true, createdAt: true },
+    });
   }
 
   res.json(user);
