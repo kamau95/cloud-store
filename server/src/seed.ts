@@ -25,14 +25,17 @@ async function ensureUser(email: string, password: string, role: "LOW" | "MID" |
 
   const existing = await prisma.user.findUnique({ where: { email } });
   if (existing && existing.id !== firebaseUid) {
-    await prisma.user.delete({ where: { id: existing.id } });
+    await prisma.$transaction([
+      prisma.$executeRawUnsafe(`UPDATE "Order" SET "userId" = $1 WHERE "userId" = $2`, firebaseUid, existing.id),
+      prisma.$executeRawUnsafe(`UPDATE "User" SET id = $1, role = $2 WHERE id = $3`, firebaseUid, role, existing.id),
+    ]);
+  } else {
+    await prisma.user.upsert({
+      where: { id: firebaseUid },
+      update: { email, role },
+      create: { id: firebaseUid, email, role },
+    });
   }
-
-  await prisma.user.upsert({
-    where: { id: firebaseUid },
-    update: { email, role },
-    create: { id: firebaseUid, email, role },
-  });
 }
 
 async function migrateExistingUsers() {
@@ -49,8 +52,10 @@ async function migrateExistingUsers() {
       await firebaseAdmin.auth().getUserByEmail(dbUser.email);
       const fbUser = await firebaseAdmin.auth().getUserByEmail(dbUser.email);
       if (dbUser.id !== fbUser.uid) {
-        await prisma.user.delete({ where: { id: dbUser.id } });
-        await prisma.user.create({ data: { id: fbUser.uid, email: dbUser.email, role: dbUser.role } });
+        await prisma.$transaction([
+          prisma.$executeRawUnsafe(`UPDATE "Order" SET "userId" = $1 WHERE "userId" = $2`, fbUser.uid, dbUser.id),
+          prisma.$executeRawUnsafe(`UPDATE "User" SET id = $1, role = $2 WHERE id = $3`, fbUser.uid, dbUser.role, dbUser.id),
+        ]);
       }
       continue;
     } catch {
@@ -64,8 +69,10 @@ async function migrateExistingUsers() {
       });
 
       if (dbUser.id !== userRecord.uid) {
-        await prisma.user.delete({ where: { id: dbUser.id } });
-        await prisma.user.create({ data: { id: userRecord.uid, email: dbUser.email, role: dbUser.role } });
+        await prisma.$transaction([
+          prisma.$executeRawUnsafe(`UPDATE "Order" SET "userId" = $1 WHERE "userId" = $2`, userRecord.uid, dbUser.id),
+          prisma.$executeRawUnsafe(`UPDATE "User" SET id = $1, role = $2 WHERE id = $3`, userRecord.uid, dbUser.role, dbUser.id),
+        ]);
       }
 
       const apiKey = process.env.FIREBASE_API_KEY;
