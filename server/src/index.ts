@@ -69,9 +69,17 @@ app.use("/api/orders", orderRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/password", passwordRoutes);
 
+const adminPath = process.env.ADMIN_PATH;
 if (process.env.NODE_ENV === "production") {
   const clientDist = path.join(__dirname, "../../client/dist");
   app.use(express.static(clientDist));
+
+  if (adminPath) {
+    app.get(`/${adminPath}*`, (_req, res) => {
+      res.sendFile(path.join(clientDist, "admin.html"));
+    });
+  }
+
   app.get("*", (_req, res) => {
     res.sendFile(path.join(clientDist, "index.html"));
   });

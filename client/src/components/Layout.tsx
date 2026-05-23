@@ -27,9 +27,6 @@ export default function Layout({ children }: { children: ReactNode }) {
               <div className="hidden md:flex items-center gap-6">
                 <Link to="/products" className="text-gray-300 hover:text-white transition text-sm">Products</Link>
                 {user && <Link to="/orders" className="text-gray-300 hover:text-white transition text-sm">My Orders</Link>}
-                {(user?.role === "MID" || user?.role === "TOP") && (
-                  <Link to="/admin" className="text-amber-400 hover:text-amber-300 transition text-sm font-medium">Admin</Link>
-                )}
               </div>
             </div>
             <div className="flex items-center gap-4">
@@ -63,9 +60,6 @@ export default function Layout({ children }: { children: ReactNode }) {
           <div className="md:hidden border-t border-gray-800 bg-gray-900 px-4 py-4 space-y-3">
             <Link to="/products" onClick={closeMenu} className="block text-gray-300 hover:text-white transition text-sm">Products</Link>
             {user && <Link to="/orders" onClick={closeMenu} className="block text-gray-300 hover:text-white transition text-sm">My Orders</Link>}
-            {(user?.role === "MID" || user?.role === "TOP") && (
-              <Link to="/admin" onClick={closeMenu} className="block text-amber-400 hover:text-amber-300 transition text-sm font-medium">Admin</Link>
-            )}
             {!user && (
               <div className="flex gap-3 pt-2">
                 <Link to="/login" onClick={closeMenu} className="text-sm text-gray-300 hover:text-white transition">Login</Link>
