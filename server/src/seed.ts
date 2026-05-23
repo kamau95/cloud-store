@@ -19,6 +19,7 @@ async function ensureUser(email: string, password: string, role: "LOW" | "MID" |
       firebaseUid = userRecord.uid;
       await firebaseAdmin.auth().updateUser(firebaseUid, { password, emailVerified: true });
     } else {
+      console.error(`ensureUser failed for ${email}:`, err.code, err.message);
       return;
     }
   }
