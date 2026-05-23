@@ -95,7 +95,24 @@ async function migrateExistingUsers() {
   }
 }
 
+async function migrateEnum() {
+  const enumValues = await prisma.$queryRawUnsafe<{ enumlabel: string }[]>(
+    `SELECT e.enumlabel FROM pg_enum e JOIN pg_type t ON e.enumtypid = t.oid WHERE t.typname = 'Role'`
+  );
+  const values = enumValues.map((r: any) => r.enumlabel);
+  if (!values.includes("LOW")) {
+    await prisma.$executeRawUnsafe(`ALTER TYPE "Role" ADD VALUE IF NOT EXISTS 'LOW'`);
+    await prisma.$executeRawUnsafe(`ALTER TYPE "Role" ADD VALUE IF NOT EXISTS 'MID'`);
+    await prisma.$executeRawUnsafe(`ALTER TYPE "Role" ADD VALUE IF NOT EXISTS 'TOP'`);
+    await prisma.$executeRawUnsafe(`UPDATE "User" SET role = 'LOW' WHERE role = 'USER'`);
+    await prisma.$executeRawUnsafe(`UPDATE "User" SET role = 'MID' WHERE role = 'ADMIN'`);
+    await prisma.$executeRawUnsafe(`UPDATE "User" SET role = 'TOP' WHERE role = 'SUPER_ADMIN'`);
+    console.log("Migrated Role enum from legacy values to LOW/MID/TOP");
+  }
+}
+
 export async function seedDatabase() {
+  await migrateEnum();
   const productCount = await prisma.product.count();
 
   if (productCount === 0) {
