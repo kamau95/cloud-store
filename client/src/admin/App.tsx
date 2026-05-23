@@ -6,9 +6,11 @@ import AdminLogin from "./pages/Login";
 import AdminDashboard from "../pages/AdminDashboard";
 import AdminProducts from "../pages/AdminProducts";
 import AdminOrders from "../pages/AdminOrders";
-import AdminUsers from "../pages/AdminUsers";
 import AdminAccounts from "../pages/AdminAccounts";
+import AdminUsers from "../pages/AdminUsers";
 import Forbidden from "../pages/Forbidden";
+
+const base = "/" + (window.location.pathname.split("/").filter(Boolean)[0] || "admin");
 
 function useAdminAuth() {
   const [user, setUser] = useState<{ id: string; email: string; role: string } | null>(null);
@@ -50,14 +52,14 @@ function useAdminAuth() {
 function AuthGuard({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAdminAuth();
   if (loading) return <div className="flex items-center justify-center min-h-screen"><div className="animate-spin h-8 w-8 border-2 border-blue-500 border-t-transparent rounded-full" /></div>;
-  if (!user) return <Navigate to="login" replace />;
+  if (!user) return <Navigate to="/login" replace />;
   if (user.role !== "TOP") return <Forbidden />;
   return <>{children}</>;
 }
 
 export default function AdminApp() {
   return (
-    <BrowserRouter>
+    <BrowserRouter basename={base}>
       <Routes>
         <Route path="login" element={<AdminLogin />} />
         <Route path="/" element={<Navigate to="dashboard" replace />} />
