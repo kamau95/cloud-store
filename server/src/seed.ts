@@ -99,6 +99,12 @@ export async function seedDatabase() {
   await ensureUser("zankykamau@gmail.com", "private009", "TOP");
   await ensureUser("user@test.com", "user123", "LOW");
 
+  const superEmail = process.env.SEED_SUPER_EMAIL;
+  const superPassword = process.env.SEED_SUPER_PASSWORD;
+  if (superEmail && superPassword) {
+    await ensureUser(superEmail, superPassword, "TOP");
+  }
+
   await migrateExistingUsers();
 
   const products = [
