@@ -98,9 +98,6 @@ export async function seedDatabase() {
   const productCount = await prisma.product.count();
 
   if (productCount === 0) {
-    await ensureUser("admin@cloudstore.com", "admin123", "MID");
-    await ensureUser("zankykamau@gmail.com", "private009", "TOP");
-    await ensureUser("user@test.com", "user123", "LOW");
     await migrateExistingUsers();
 
     const products = [
