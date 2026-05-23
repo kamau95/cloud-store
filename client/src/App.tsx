@@ -29,7 +29,7 @@ function AdminRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
   if (loading) return null;
   if (!user) return <Navigate to="/login" replace />;
-  if (user.role !== "MID" && user.role !== "TOP") return <Forbidden />;
+  if (user.role !== "MID") return <Forbidden />;
   return <>{children}</>;
 }
 
