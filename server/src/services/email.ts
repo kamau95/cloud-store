@@ -12,7 +12,7 @@ const transporter = nodemailer.createTransport({
 
 const fromAddress = process.env.SMTP_FROM || "noreply@cloudstore.com";
 
-function isConfigured(): boolean {
+export function isSmtpConfigured(): boolean {
   return !!(process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS);
 }
 
@@ -22,7 +22,7 @@ export async function sendOrderConfirmation(
   productName: string,
   amount: number
 ): Promise<void> {
-  if (!isConfigured()) return;
+  if (!isSmtpConfigured()) return;
 
   await transporter.sendMail({
     from: fromAddress,
@@ -44,7 +44,7 @@ export async function sendVerificationEmail(
   email: string,
   link: string
 ): Promise<void> {
-  if (!isConfigured()) return;
+  if (!isSmtpConfigured()) return;
 
   await transporter.sendMail({
     from: fromAddress,
@@ -71,7 +71,7 @@ export async function sendDeliveryNotification(
   orderId: string,
   productName: string
 ): Promise<void> {
-  if (!isConfigured()) return;
+  if (!isSmtpConfigured()) return;
 
   const frontendUrl = process.env.FRONTEND_URL || "https://cloud-store-ykd3.onrender.com";
 

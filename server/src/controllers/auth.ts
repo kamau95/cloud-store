@@ -4,7 +4,7 @@ import { z } from "zod";
 import { AuthRequest } from "../types";
 import { firebaseAdmin } from "../services/firebase";
 import { logEvent } from "../services/audit";
-import { sendVerificationEmail } from "../services/email";
+import { sendVerificationEmail, isSmtpConfigured } from "../services/email";
 
 const prisma = new PrismaClient();
 
@@ -39,10 +39,15 @@ export async function register(req: AuthRequest, res: Response): Promise<void> {
     });
 
     const frontendUrl = process.env.FRONTEND_URL || "https://cloud-store-ykd3.onrender.com";
+    if (!isSmtpConfigured()) {
+      console.warn("SMTP not configured. Verification email will not be sent for", email.toLowerCase());
+    }
     const link = await firebaseAdmin.auth().generateEmailVerificationLink(email.toLowerCase(), {
       url: `${frontendUrl}/login`,
     });
-    sendVerificationEmail(email.toLowerCase(), link).catch(() => {});
+    sendVerificationEmail(email.toLowerCase(), link).catch((err) => {
+      console.error("Failed to send verification email via SMTP:", err);
+    });
 
     logEvent({ userId: userRecord.uid, email: email.toLowerCase(), event: "register", ip: req.ip, userAgent: req.headers["user-agent"] });
 
