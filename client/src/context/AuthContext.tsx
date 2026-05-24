@@ -3,7 +3,6 @@ import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
   signOut,
-  sendEmailVerification,
   onAuthStateChanged,
   User as FirebaseUser,
 } from "firebase/auth";
@@ -31,7 +30,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const fbUser = auth.currentUser;
     if (fbUser) {
       try {
-        return await fbUser.getIdToken();
+        return await fbUser.getIdToken(true);
       } catch {
         return null;
       }
@@ -124,11 +123,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         throw err;
       }
     }
-
-    await sendEmailVerification(user, {
-      url: `${window.location.origin}/login`,
-      handleCodeInApp: false,
-    });
 
     const token = await user.getIdToken();
     const res = await fetch("/api/auth/register", {

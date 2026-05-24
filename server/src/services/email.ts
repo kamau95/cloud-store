@@ -40,6 +40,32 @@ export async function sendOrderConfirmation(
   });
 }
 
+export async function sendVerificationEmail(
+  email: string,
+  link: string
+): Promise<void> {
+  if (!isConfigured()) return;
+
+  await transporter.sendMail({
+    from: fromAddress,
+    to: email,
+    subject: "Verify your email for CloudStore",
+    html: `
+      <div style="font-family:sans-serif;max-width:600px;margin:0 auto;">
+        <h2 style="color:#3b82f6;">CloudStore</h2>
+        <p>Click the button below to verify your email address.</p>
+        <p style="margin:24px 0;">
+          <a href="${link}" style="display:inline-block;background:#3b82f6;color:white;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:600;">Verify Email</a>
+        </p>
+        <p style="color:#6b7280;font-size:14px;">Or copy this link:</p>
+        <p style="color:#6b7280;font-size:12px;word-break:break-all;">${link}</p>
+        <hr style="border:none;border-top:1px solid #e5e7eb;margin:24px 0;">
+        <p style="color:#6b7280;font-size:12px;">If you did not create this account, ignore this email.</p>
+      </div>
+    `,
+  });
+}
+
 export async function sendDeliveryNotification(
   email: string,
   orderId: string,
