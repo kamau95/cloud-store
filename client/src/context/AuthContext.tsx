@@ -3,7 +3,6 @@ import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
   signOut,
-  sendEmailVerification,
   onAuthStateChanged,
   User as FirebaseUser,
 } from "firebase/auth";
@@ -124,8 +123,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         throw err;
       }
     }
-
-    sendEmailVerification(user).catch(() => {});
 
     const token = await user.getIdToken();
     const res = await fetch("/api/auth/register", {

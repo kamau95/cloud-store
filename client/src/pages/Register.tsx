@@ -27,12 +27,12 @@ export default function Register() {
   if (sent) {
     return (
       <div className="max-w-md mx-auto px-4 py-20 text-center">
-        <h1 className="text-3xl font-bold mb-4">Check your email</h1>
+        <h1 className="text-3xl font-bold mb-4">Account created</h1>
         <p className="text-gray-400 mb-8">
-          We sent a confirmation link to <span className="text-white">{email}</span>.
-          Click the link to activate your account.
+          Your account for <span className="text-white">{email}</span> is ready.
+          You can now log in.
         </p>
-        <Link to="/login" className="text-blue-400 hover:underline text-sm">Go to login</Link>
+        <Link to="/login" className="inline-block bg-blue-600 hover:bg-blue-500 px-6 py-2.5 rounded-lg text-sm font-medium transition">Go to login</Link>
       </div>
     );
   }
