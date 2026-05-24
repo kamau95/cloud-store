@@ -134,8 +134,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       body: JSON.stringify({ email }),
     });
     if (!res.ok) {
+      const body = await res.json().catch(() => ({ error: "Registration failed" }));
       await signOut(auth);
-      throw new Error("Email already registered. Try resetting your password.");
+      throw new Error(body.error || "Registration failed");
     }
 
     await signOut(auth);

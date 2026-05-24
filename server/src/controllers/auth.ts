@@ -39,15 +39,16 @@ export async function register(req: AuthRequest, res: Response): Promise<void> {
     });
 
     const frontendUrl = process.env.FRONTEND_URL || "https://cloud-store-ykd3.onrender.com";
-    if (!isSmtpConfigured()) {
-      console.warn("SMTP not configured. Verification email will not be sent for", email.toLowerCase());
-    }
-    const link = await firebaseAdmin.auth().generateEmailVerificationLink(email.toLowerCase(), {
-      url: `${frontendUrl}/login`,
-    });
-    sendVerificationEmail(email.toLowerCase(), link).catch((err) => {
-      console.error("Failed to send verification email via SMTP:", err);
-    });
+
+    firebaseAdmin.auth().generateEmailVerificationLink(email.toLowerCase(), { url: `${frontendUrl}/login` })
+      .then((link) => {
+        sendVerificationEmail(email.toLowerCase(), link).catch((err) => {
+          console.error("Failed to send verification email via SMTP:", err);
+        });
+      })
+      .catch((err) => {
+        console.error("Failed to generate verification link:", err);
+      });
 
     logEvent({ userId: userRecord.uid, email: email.toLowerCase(), event: "register", ip: req.ip, userAgent: req.headers["user-agent"] });
 
