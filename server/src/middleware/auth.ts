@@ -47,6 +47,30 @@ export async function authenticate(req: AuthRequest, res: Response, next: NextFu
   next();
 }
 
+export async function authenticateBasic(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+  const header = req.headers.authorization;
+  if (!header || !header.startsWith("Bearer ")) {
+    res.status(401).json({ error: "Not authenticated" });
+    return;
+  }
+
+  const token = header.slice(7);
+  const decoded = await verifyIdToken(token);
+  if (!decoded) {
+    res.status(401).json({ error: "Invalid or expired token" });
+    return;
+  }
+
+  req.user = {
+    userId: decoded.uid,
+    id: decoded.uid,
+    email: decoded.email || "",
+    role: "LOW",
+    tokenVersion: 0,
+  };
+  next();
+}
+
 export async function sessionBinding(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
   next();
 }

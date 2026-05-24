@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, ReactNode } from "react";
+import { createContext, useContext, useEffect, useState, useRef, ReactNode } from "react";
 import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
@@ -16,7 +16,7 @@ interface AuthContextValue {
   login: (email: string, password: string) => Promise<void>;
   register: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
-  refreshUser: () => Promise<void>;
+  refreshUser: () => Promise<User | null>;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -24,6 +24,7 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const refreshPromiseRef = useRef<Promise<User | null> | null>(null);
 
   const getToken = async (): Promise<string | null> => {
     const auth = await getAuthInstance();
@@ -38,23 +39,39 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return null;
   };
 
-  const refreshUser = async () => {
+  const refreshUser = async (): Promise<User | null> => {
+    if (refreshPromiseRef.current) return refreshPromiseRef.current;
+    refreshPromiseRef.current = doRefresh();
+    try {
+      return await refreshPromiseRef.current;
+    } finally {
+      refreshPromiseRef.current = null;
+    }
+  };
+
+  const doRefresh = async (): Promise<User | null> => {
     const token = await getToken();
     if (!token) {
       setUser(null);
-      return;
+      return null;
     }
     try {
       const res = await fetch("/api/auth/me", {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (res.ok) {
-        setUser(await res.json());
-      } else {
-        setUser(null);
+        const data = await res.json();
+        setUser(data);
+        return data;
       }
-    } catch {
+      const errBody = await res.json().catch(() => ({ error: `Request failed (${res.status})` }));
+      console.error("refreshUser failed:", res.status, errBody);
       setUser(null);
+      return null;
+    } catch (err) {
+      console.error("refreshUser error:", err);
+      setUser(null);
+      return null;
     }
   };
 
@@ -85,7 +102,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const login = async (email: string, password: string) => {
     const auth = await getAuthInstance();
     await signInWithEmailAndPassword(auth, email, password);
-    await refreshUser();
+    const u = await refreshUser();
+    if (!u) {
+      await signOut(auth);
+      throw new Error("Login failed. Make sure your email is verified and try again.");
+    }
   };
 
   const register = async (email: string, password: string) => {
@@ -104,7 +125,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     }
 
-    await sendEmailVerification(user);
+    await sendEmailVerification(user, {
+      url: `${window.location.origin}/login`,
+      handleCodeInApp: false,
+    });
 
     const token = await user.getIdToken();
     const res = await fetch("/api/auth/register", {
