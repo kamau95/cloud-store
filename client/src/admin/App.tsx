@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import AdminLogin from "./pages/Login";
 import AdminDashboard from "../pages/AdminDashboard";
@@ -19,9 +19,6 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
 }
 
 export default function AdminApp() {
-  const location = useLocation();
-  const isLogin = location.pathname === "/login";
-
   return (
     <BrowserRouter basename={base}>
       <Routes>
