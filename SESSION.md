@@ -1,89 +1,43 @@
-# Cloud Store — Session & Auth Architecture
+# Session Log
 
-## Auth System: Firebase Auth (migrated from Supabase)
+## Goal
+- Build a cloud account marketplace (AWS/GCP/Azure credentials sold via crypto payment) with Firebase Auth, hidden super admin panel, email notifications, and role-based access.
 
-- **Client**: Firebase Auth SDK handles sign-up, sign-in, password reset, email verification
-- **Server**: Firebase Admin SDK verifies ID tokens, manages users
-- **Profile**: `User` table in Postgres (via Prisma) stores `id` (Firebase UID), `email`, `role`
-- **Roles**: `LOW` (user), `MID` (admin), `TOP` (super admin)
+## Constraints & Preferences
+- Super admin (TOP) uses a separate hidden SPA at a configurable `ROOT_PATH` env var — no links, no code in main bundle.
+- Regular admins (MID) use visible `/admin/*` routes in the main app.
+- Only one super admin account exists; super admin can invite/promote/demote other users (LOW ↔ MID).
+- No "forgot password" on the hidden admin login page.
+- Commit messages must be vague (no hints about feature).
+- App deployed on Render at `cloud-store-ykd3.onrender.com`.
 
-### Key Files
-| File | Purpose |
-|---|---|
-| `client/src/lib/firebase.ts` | Lazy Firebase client — fetches config from `/api/auth/config` at runtime |
-| `client/src/context/AuthContext.tsx` | React context wrapping Firebase auth state |
-| `client/src/api/client.ts` | API client auto-attaches Bearer token from Firebase ID token |
-| `server/src/services/firebase.ts` | Firebase Admin SDK init, token verification, config endpoint |
-| `server/src/middleware/auth.ts` | `authenticate` (checks emailVerified), `requireAdmin`, `requireSuperAdmin` |
+## Progress
 
-### Auth Flow
-1. Client fetches Firebase config from `GET /api/auth/config`
-2. Initializes Firebase app, user signs in via `signInWithEmailAndPassword()`
-3. Firebase SDK persists session, `onAuthStateChanged` fires
-4. API client gets ID token via `user.getIdToken()` and sends as `Authorization: Bearer <token>`
-5. Server middleware verifies ID token via Firebase Admin SDK, checks `emailVerified`
-6. Role-based guards (`requireAdmin` → `MID`, `requireSuperAdmin` → `TOP`) check `req.user.role`
+### Done
+- All previous items (404/403 pages, admin routes, email service, admin SPA, seed, Firebase Auth setup, etc.)
+- **Fixed `useAuth must be used within AuthProvider`**: admin SPA (`main.tsx`) now wraps with `AuthProvider`; `App.tsx` uses shared `useAuth()` instead of custom `useAdminAuth()`.
+- **Fixed 403 on admin API endpoints**: `authenticate` middleware now loads user's role from DB instead of defaulting to `"LOW"`, so `requireAdmin`/`requireSuperAdmin` see the correct role immediately.
+- **Fixed admin SPA dashboard links**: changed `/admin/products` etc. to dynamic `linkPrefix` — empty for TOP (admin SPA: `/products`) or `/admin` for MID (main app: `/admin/products`).
+- **Fixed session not persisting after login**: `getMe` auto-creates DB record if Firebase-authenticated user has no DB entry (instead of returning 404).
+- **Fixed Role enum mismatch**: DB had legacy values (`USER`, `ADMIN`, `SUPER_ADMIN`) while Prisma expected (`LOW`, `MID`, `TOP`). Added `migrateEnum()` to `seed.ts` that runs on startup.
+- **Fixed server crash loop (502)**: moved seed to run after `app.listen()` so Render health check succeeds immediately (seed was blocking startup, causing restart loop).
+- **Removed product seeding and user migration**: seed now only does enum migration + super admin `ensureUser`. Products and users are managed manually through the app.
+- **Fixed `getMe` crash (P2002 unique constraint)**: when email exists with a different Firebase UID, update the existing record's UID instead of crashing.
+- **Added `process.on("unhandledRejection")` handler**: prevents async errors in Express route handlers from crashing the Node process.
 
-### Register Flow
-1. Client tries `createUserWithEmailAndPassword()`
-2. If `EMAIL_EXISTS`, falls back to `signInWithEmailAndPassword()` (same credentials)
-3. Sends verification email via `sendEmailVerification()`
-4. Calls `POST /api/auth/register` with ID token → server creates/upserts DB record
-5. Signs user out → shows "Check your email" screen
+### Known Issues
+- None currently
 
-### Routes
-- `GET /api/auth/config` — returns Firebase Web SDK config (unauthenticated)
-- `POST /api/auth/register` — creates DB record (requires ID token)
-- `POST /api/auth/login` — server-side login (checks email verified)
-- `GET /api/auth/me` — returns current user profile
-- `POST /api/auth/logout` — revokes refresh tokens
-- `POST /api/password/forgot` — generates password reset link
-- `POST /api/password/reset` — updates password
+## Key Decisions
+- Seed runs in background after server starts to avoid Render health check timeout.
+- `getMe` auto-creates DB record (or updates UID on conflict) instead of returning 404.
+- Enums migrated via raw SQL on startup (ALTER TYPE ADD VALUE) instead of Prisma migrations.
+- Admin SPA uses shared `AuthProvider` from main app to avoid duplicate auth logic.
 
-### Seed / Migrated Users (created on startup)
-| Email | Password | Role |
-|---|---|---|
-| admin@cloudstore.com | admin123 | MID |
-| zankykamau@gmail.com | private009 | TOP |
-| user@test.com | user123 | LOW |
-
-Existing DB users from Supabase era are auto-migrated on startup:
-- Firebase Auth account created with random password
-- Password reset email sent via Firebase REST API
-- DB record updated with Firebase UID
-
-### Environment Variables (Server — set in Render)
-- `FIREBASE_SERVICE_ACCOUNT` — full service account JSON (recommended)
-- OR individual: `FIREBASE_PROJECT_ID`, `FIREBASE_CLIENT_EMAIL`, `FIREBASE_PRIVATE_KEY`
-- `FIREBASE_API_KEY` — Web API key
-- `FIREBASE_AUTH_DOMAIN` — e.g. `project.firebaseapp.com`
-- `FIREBASE_STORAGE_BUCKET`, `FIREBASE_MESSAGING_SENDER_ID`, `FIREBASE_APP_ID`
-- `FRONTEND_URL` — for CORS and redirect URLs
-- `DATABASE_URL` — Postgres connection string
-
-### Deployment (Render Docker)
-- `Dockerfile` at repo root builds client + server in stages
-- Client builds without any `VITE_` env vars (config fetched at runtime)
-- Start command runs `prisma migrate deploy && node dist/index.js`
-- Prisma needs `binaryTargets = ["native", "debian-openssl-3.0.x"]` in schema.prisma
-
-### Supabase → Firebase Migration Steps (completed)
-1. ✅ Installed `firebase-admin` (server) and `firebase` (client)
-2. ✅ Created Firebase Admin SDK service with token verification
-3. ✅ Updated auth middleware to verify Firebase ID tokens + check emailVerified
-4. ✅ Updated register/login/logout controllers for Firebase
-5. ✅ Updated password reset flow to use Firebase Admin SDK
-6. ✅ Removed `@supabase/supabase-js`, `jose`, `ws` dependencies
-7. ✅ CSP updated to allow Firebase REST APIs
-8. ✅ Seed creates users in Firebase Auth directly
-9. ✅ Existing DB users auto-migrated to Firebase Auth on startup
-10. ✅ Roles renamed: USER→LOW, ADMIN→MID, SUPER_ADMIN→TOP
-
-### Firebase Console Settings
-- **Authentication > Sign-in method**: Email/Password enabled
-- **Authentication > Templates > Password reset**: Action URL set to `https://cloud-store-ykd3.onrender.com/reset-password`
-- **Authentication > URL Configuration**: Site URL = Render URL, Redirect URLs include Render URL
-
-### CSP Directives (server/src/index.ts)
-- `connect-src`: `'self'`, Firebase Auth domain, `identitytoolkit.googleapis.com`, `securetoken.googleapis.com`
-- No Supabase URLs needed anymore
+## Env Vars (Render)
+- `ROOT_PATH` — hidden admin SPA path segment
+- `SEED_SUPER_EMAIL` — super admin email (creates/updates each deploy)
+- `SUPER_ADMIN_PASSWORD` — super admin password
+- Firebase vars: `FIREBASE_API_KEY`, `FIREBASE_AUTH_DOMAIN`, `FIREBASE_PROJECT_ID`, `FIREBASE_CLIENT_EMAIL`, `FIREBASE_PRIVATE_KEY`, `FIREBASE_STORAGE_BUCKET`, `FIREBASE_APP_ID`, `FIREBASE_MESSAGING_SENDER_ID`
+- SMTP vars: `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM`
+- `APP_URL`, `FRONTEND_URL`, `DATABASE_URL`
