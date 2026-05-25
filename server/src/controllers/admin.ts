@@ -282,7 +282,7 @@ export async function deleteUser(req: AuthRequest, res: Response): Promise<void>
   const { id } = req.params;
 
   if (req.user?.id === id) {
-    res.status(400).json({ error: "Cannot delete yourself" });
+    res.status(400).json({ error: "Cannot demote yourself" });
     return;
   }
 
@@ -292,17 +292,12 @@ export async function deleteUser(req: AuthRequest, res: Response): Promise<void>
     return;
   }
 
-  if (user.role === "TOP") {
-    res.status(400).json({ error: "Cannot delete super admin" });
-    return;
-  }
+  await prisma.user.update({
+    where: { id },
+    data: { role: "LOW" },
+  });
 
-  await prisma.$transaction([
-    prisma.order.deleteMany({ where: { userId: id } }),
-    prisma.user.delete({ where: { id } }),
-  ]);
-
-  res.json({ message: "User deleted" });
+  res.json({ message: "User demoted to LOW" });
 }
 
 export const purgeUsersSchema = z.object({
