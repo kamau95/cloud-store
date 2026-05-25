@@ -94,6 +94,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         unsubscribe();
         cancelled = true;
       };
+    }).catch(() => {
+      if (!cancelled) {
+        setUser(null);
+        setLoading(false);
+      }
     });
     return () => { cancelled = true; };
   }, []);
