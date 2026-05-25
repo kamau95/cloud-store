@@ -25,6 +25,7 @@ export default function AdminLogin() {
       const profile = await res.json();
       if (profile.role !== "TOP") {
         toast.error("Access denied. Super admin privileges required.");
+        await signOut(auth);
         return;
       }
 

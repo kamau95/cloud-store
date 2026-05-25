@@ -10,6 +10,7 @@
 - No "forgot password" on the hidden admin login page.
 - Commit messages must be vague (no hints about feature).
 - App deployed on Render at `cloud-store-ykd3.onrender.com`.
+- Always ask user for commit message before committing changes.
 
 ## Progress
 
