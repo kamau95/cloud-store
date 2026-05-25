@@ -177,15 +177,15 @@ export default function AdminProducts() {
         </form>
       )}
 
-      <div className="flex items-center gap-3 mb-6">
+      <div className="flex items-center gap-3 mb-6 flex-wrap">
         <input
           type="text"
           placeholder="Search products..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm w-64"
+          className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm w-full md:w-64"
         />
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
           {["ALL", "AWS", "GCP", "AZURE", "OTHER"].map((p) => (
             <button
               key={p}
@@ -212,7 +212,7 @@ export default function AdminProducts() {
       ) : (
         <div className="space-y-3">
           {filtered.map((p) => (
-            <div key={p.id} className="border border-gray-800 rounded-xl p-4 flex items-center justify-between">
+            <div key={p.id} className="border border-gray-800 rounded-xl p-4 md:flex md:items-center md:justify-between">
               <div className="flex-1 min-w-0">
                 <span className="font-medium">{p.name}</span>
                 <span className="text-sm text-gray-500 ml-2">{p.provider}</span>
@@ -221,7 +221,7 @@ export default function AdminProducts() {
                   Stock: {p.stock}
                 </span>
               </div>
-              <div className="flex items-center gap-2 ml-4">
+              <div className="flex items-center gap-2 mt-2 md:mt-0 md:ml-4">
                 <button onClick={() => startEdit(p)} className="text-blue-400 hover:text-blue-300 text-sm transition">
                   Edit
                 </button>

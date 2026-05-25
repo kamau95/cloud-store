@@ -103,7 +103,7 @@ export default function AdminUsers() {
         <div className="border border-gray-800 rounded-xl p-6 mb-8 space-y-6">
           <div>
             <h2 className="text-lg font-semibold mb-4">Invite Admin</h2>
-            <form onSubmit={handleInvite} className="flex gap-3">
+            <form onSubmit={handleInvite} className="flex flex-col md:flex-row gap-3">
               <input
                 type="email"
                 value={inviteEmail}
@@ -126,7 +126,7 @@ export default function AdminUsers() {
           <div>
             <h2 className="text-lg font-semibold mb-4 text-red-400">Purge Old Users</h2>
             <p className="text-sm text-gray-500 mb-3">Delete all users who joined before a given date.</p>
-            <div className="flex gap-3">
+            <div className="flex flex-col md:flex-row gap-3">
               <input
                 type="date"
                 value={purgeBefore}

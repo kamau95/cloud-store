@@ -29,8 +29,8 @@ export default function AdminDashboard() {
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-12">
-      <div className="flex items-center justify-between mb-8">
-        <h1 className="text-3xl font-bold">Admin Dashboard</h1>
+      <div className="flex items-center justify-between mb-8 gap-3 flex-wrap">
+        <h1 className="text-2xl md:text-3xl font-bold">Admin Dashboard</h1>
         {isSuper && (
           <span className="text-xs bg-purple-600 text-white px-3 py-1 rounded-full font-medium">
             Super Admin

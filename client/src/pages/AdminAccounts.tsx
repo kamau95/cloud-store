@@ -240,14 +240,14 @@ export default function AdminAccounts() {
         )}
       </div>
 
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex items-center justify-between mb-4 gap-3 flex-wrap">
         <h2 className="text-xl font-semibold">Stored ({accounts.length})</h2>
         <input
           type="text"
           placeholder="Search by email or provider..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-1.5 text-sm w-64"
+          className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-1.5 text-sm w-full md:w-64"
         />
       </div>
 

@@ -98,7 +98,7 @@ export default function AdminOrders() {
           placeholder="Search by order ID or email..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm w-72"
+          className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm w-full md:w-72"
         />
         <input
           type="date"
