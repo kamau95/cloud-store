@@ -19,6 +19,7 @@ router.get("/users", admin.getUsers);
 router.patch("/users/:id/role", requireSuperAdmin, validate(admin.updateRoleSchema), admin.updateUserRole);
 router.delete("/users/:id", requireSuperAdmin, admin.deleteUser);
 router.post("/users/invite", requireSuperAdmin, validate(admin.inviteAdminSchema), admin.inviteAdmin);
+router.post("/users/purge", requireSuperAdmin, validate(admin.purgeUsersSchema), admin.purgeUsers);
 router.get("/fees", requireSuperAdmin, admin.getFeeSummary);
 
 export default router;

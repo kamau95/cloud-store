@@ -300,6 +300,36 @@ export async function deleteUser(req: AuthRequest, res: Response): Promise<void>
   res.json({ message: "User demoted to LOW" });
 }
 
+export const purgeUsersSchema = z.object({
+  before: z.string().refine((d) => !isNaN(Date.parse(d)), { message: "Invalid date" }),
+});
+
+export async function purgeUsers(req: AuthRequest, res: Response): Promise<void> {
+  const { before } = req.body;
+  const cutoff = new Date(before);
+
+  const targetUsers = await prisma.user.findMany({
+    where: { createdAt: { lt: cutoff }, role: { not: "TOP" } },
+    select: { id: true, email: true, createdAt: true },
+  });
+
+  const ids = targetUsers.map((u) => u.id);
+  if (ids.length === 0) {
+    res.json({ deleted: 0, message: "No users found before that date" });
+    return;
+  }
+
+  await prisma.$transaction([
+    prisma.order.deleteMany({ where: { userId: { in: ids } } }),
+    prisma.user.deleteMany({ where: { id: { in: ids } } }),
+  ]);
+
+  res.json({
+    deleted: ids.length,
+    users: targetUsers.map((u) => ({ email: u.email, joined: u.createdAt })),
+  });
+}
+
 export async function listAccountPool(req: AuthRequest, res: Response): Promise<void> {
   const keys = await vault.listCredentials();
   const accounts = [];
