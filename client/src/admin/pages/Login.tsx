@@ -1,4 +1,4 @@
-import { useState, FormEvent, useEffect, useRef } from "react";
+import { useState, FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { getAuthInstance } from "../../lib/firebase";
 import { signInWithEmailAndPassword, signOut } from "firebase/auth";
@@ -9,39 +9,7 @@ export default function AdminLogin() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  const [authLoading, setAuthLoading] = useState(false);
   const navigate = useNavigate();
-  const authInitialized = useRef(false);
-
-  useEffect(() => {
-    const checkAuthReady = async () => {
-      if (authInitialized.current) return;
-      authInitialized.current = true;
-      try {
-        const auth = await getAuthInstance().catch(() => null);
-        if (!auth) return;
-        const user = auth.currentUser;
-        if (user) {
-          const token = await user.getIdToken();
-          const res = await fetch("/api/auth/me", {
-            headers: { Authorization: `Bearer ${token}` },
-          });
-          const profile = await res.json();
-          if (profile.role !== "TOP") {
-            toast.error("Access denied. Super admin privileges required.");
-            await signOut(auth);
-          } else {
-            toast.success("Logged in");
-            navigate("/dashboard");
-          }
-        }
-      } catch (err) {
-        console.error("Auth check failed:", err);
-      }
-    };
-
-    checkAuthReady();
-  }, [navigate]);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
