@@ -51,6 +51,11 @@ export default function AdminUsers() {
     }
   };
 
+  const roleLabel = (role: string) => {
+    if (role === "MID") return "Admin";
+    return role;
+  };
+
   const roleBadge = (role: string) => {
     if (role === "LOW") return null;
     const colors: Record<string, string> = {
@@ -59,7 +64,7 @@ export default function AdminUsers() {
     };
     return (
       <span className={`text-xs font-medium px-2 py-1 rounded ${colors[role] || ""}`}>
-        {role}
+        {roleLabel(role)}
       </span>
     );
   };
@@ -140,7 +145,7 @@ export default function AdminUsers() {
                         className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-1.5 text-sm"
                       >
                         <option value="LOW">LOW</option>
-                        <option value="MID">MID</option>
+                        <option value="MID">Admin</option>
                       </select>
                       {u.role === "MID" && (
                         <button
