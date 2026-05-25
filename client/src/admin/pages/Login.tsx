@@ -1,15 +1,15 @@
 import { useState, FormEvent } from "react";
-import { useNavigate } from "react-router-dom";
 import { getAuthInstance } from "../../lib/firebase";
 import { signInWithEmailAndPassword, signOut } from "firebase/auth";
 import { friendlyError } from "../../lib/errors";
 import toast from "react-hot-toast";
 
+const basePath = window.location.pathname.split("/").filter(Boolean)[0];
+
 export default function AdminLogin() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  const navigate = useNavigate();
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -30,7 +30,7 @@ export default function AdminLogin() {
       }
 
       toast.success("Logged in");
-      navigate("/dashboard");
+      window.location.href = `/${basePath}/dashboard`;
     } catch (err) {
       toast.error(friendlyError(err));
     } finally {
