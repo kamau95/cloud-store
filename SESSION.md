@@ -25,15 +25,24 @@
 - **Removed product seeding and user migration**: seed now only does enum migration + super admin `ensureUser`. Products and users are managed manually through the app.
 - **Fixed `getMe` crash (P2002 unique constraint)**: when email exists with a different Firebase UID, update the existing record's UID instead of crashing.
 - **Added `process.on("unhandledRejection")` handler**: prevents async errors in Express route handlers from crashing the Node process.
+- **MID can view users**: removed `requireSuperAdmin` from `GET /admin/users` — MID can see all users but not modify roles. Hides TOP users from MID. LOW badge hidden, MID displays as "Admin".
+- **Full page redirect on login**: admin SPA login now uses `window.location.href` instead of `navigate()` to force clean Firebase initialization.
+- **Removed StrictMode from admin SPA**: prevents double-mount race conditions with Firebase auth listener.
+- **Bulk user purge**: `POST /admin/users/purge` protected by `requireSuperAdmin` with date input UI in TOP users page.
+- **Single user delete**: `DELETE /admin/users/:id` now permanently deletes user + orders (was just demoting to LOW). Trash button in expanded user details.
+- **Responsive admin UI**: all admin pages now wrap/stack properly on mobile (flex-wrap, full-width inputs, stacked forms).
+- **Login toast fix**: removed duplicate auth-check `useEffect` from admin login page — "Logged in" toast shows only once.
 
 ### Known Issues
-- None currently
+- Firebase `accounts:lookup` 400 error on initial admin SPA load (cached/invalid session). Workaround: full page redirect after login + removed StrictMode.
 
 ## Key Decisions
 - Seed runs in background after server starts to avoid Render health check timeout.
 - `getMe` auto-creates DB record (or updates UID on conflict) instead of returning 404.
 - Enums migrated via raw SQL on startup (ALTER TYPE ADD VALUE) instead of Prisma migrations.
 - Admin SPA uses shared `AuthProvider` from main app to avoid duplicate auth logic.
+- Full page redirect (`window.location.href`) on admin login to ensure clean Firebase auth initialization.
+- Existing `deleteUser` controller changed from "demote to LOW" to permanent user+orders deletion.
 
 ## Env Vars (Render)
 - `ROOT_PATH` — hidden admin SPA path segment
