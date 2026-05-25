@@ -18,7 +18,8 @@ export default function AdminLogin() {
       if (authInitialized.current) return;
       authInitialized.current = true;
       try {
-        const auth = await getAuthInstance();
+        const auth = await getAuthInstance().catch(() => null);
+        if (!auth) return;
         const user = auth.currentUser;
         if (user) {
           const token = await user.getIdToken();
