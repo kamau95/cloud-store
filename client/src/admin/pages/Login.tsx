@@ -1,7 +1,7 @@
 import { useState, FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { getAuthInstance } from "../../lib/firebase";
-import { signInWithEmailAndPassword } from "firebase/auth";
+import { signInWithEmailAndPassword, signOut } from "firebase/auth";
 import { friendlyError } from "../../lib/errors";
 import toast from "react-hot-toast";
 
