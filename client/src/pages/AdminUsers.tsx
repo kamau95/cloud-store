@@ -12,6 +12,7 @@ interface AppUser {
 
 export default function AdminUsers() {
   const { user: me } = useAuth();
+  const isSuper = me?.role === "TOP";
   const [users, setUsers] = useState<AppUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [inviteEmail, setInviteEmail] = useState("");
@@ -64,23 +65,27 @@ export default function AdminUsers() {
       <p className="text-gray-500 text-sm mb-8">Manage user roles and invite new admins.</p>
 
       <div className="border border-gray-800 rounded-xl p-6 mb-8">
-        <h2 className="text-lg font-semibold mb-4">Invite Admin</h2>
-        <form onSubmit={handleInvite} className="flex gap-3">
-          <input
-            type="email"
-            value={inviteEmail}
-            onChange={(e) => setInviteEmail(e.target.value)}
-            placeholder="user@example.com"
-            required
-            className="flex-1 bg-gray-800 border border-gray-700 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-blue-500 transition"
-          />
-          <button
-            type="submit"
-            className="bg-blue-600 hover:bg-blue-500 px-6 py-2.5 rounded-xl text-sm font-medium transition"
-          >
-            Invite
-          </button>
-        </form>
+        {isSuper && (
+          <>
+            <h2 className="text-lg font-semibold mb-4">Invite Admin</h2>
+            <form onSubmit={handleInvite} className="flex gap-3">
+              <input
+                type="email"
+                value={inviteEmail}
+                onChange={(e) => setInviteEmail(e.target.value)}
+                placeholder="user@example.com"
+                required
+                className="flex-1 bg-gray-800 border border-gray-700 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-blue-500 transition"
+              />
+              <button
+                type="submit"
+                className="bg-blue-600 hover:bg-blue-500 px-6 py-2.5 rounded-xl text-sm font-medium transition"
+              >
+                Invite
+              </button>
+            </form>
+          </>
+        )}
       </div>
 
       {loading ? (
