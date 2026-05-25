@@ -17,6 +17,8 @@ export default function AdminUsers() {
   const [loading, setLoading] = useState(true);
   const [inviteEmail, setInviteEmail] = useState("");
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [purgeBefore, setPurgeBefore] = useState("2026-05-23");
+  const [purging, setPurging] = useState(false);
 
   const fetchUsers = () => {
     setLoading(true);
@@ -48,6 +50,20 @@ export default function AdminUsers() {
       fetchUsers();
     } catch (err) {
       toast.error((err as Error).message);
+    }
+  };
+
+  const handlePurge = async () => {
+    if (!window.confirm(`Delete all users who joined before ${purgeBefore}? This cannot be undone.`)) return;
+    setPurging(true);
+    try {
+      const res = await api.post<{ deleted: number; users: { email: string }[] }>("/admin/users/purge", { before: purgeBefore });
+      toast.success(`Deleted ${res.deleted} user(s)`);
+      fetchUsers();
+    } catch (err) {
+      toast.error((err as Error).message);
+    } finally {
+      setPurging(false);
     }
   };
 
@@ -84,24 +100,48 @@ export default function AdminUsers() {
       <p className="text-gray-500 text-sm mb-8">View all registered users.</p>
 
       {isSuper && (
-        <div className="border border-gray-800 rounded-xl p-6 mb-8">
-          <h2 className="text-lg font-semibold mb-4">Invite Admin</h2>
-          <form onSubmit={handleInvite} className="flex gap-3">
-            <input
-              type="email"
-              value={inviteEmail}
-              onChange={(e) => setInviteEmail(e.target.value)}
-              placeholder="user@example.com"
-              required
-              className="flex-1 bg-gray-800 border border-gray-700 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-blue-500 transition"
-            />
-            <button
-              type="submit"
-              className="bg-blue-600 hover:bg-blue-500 px-6 py-2.5 rounded-xl text-sm font-medium transition"
-            >
-              Invite
-            </button>
-          </form>
+        <div className="border border-gray-800 rounded-xl p-6 mb-8 space-y-6">
+          <div>
+            <h2 className="text-lg font-semibold mb-4">Invite Admin</h2>
+            <form onSubmit={handleInvite} className="flex gap-3">
+              <input
+                type="email"
+                value={inviteEmail}
+                onChange={(e) => setInviteEmail(e.target.value)}
+                placeholder="user@example.com"
+                required
+                className="flex-1 bg-gray-800 border border-gray-700 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-blue-500 transition"
+              />
+              <button
+                type="submit"
+                className="bg-blue-600 hover:bg-blue-500 px-6 py-2.5 rounded-xl text-sm font-medium transition"
+              >
+                Invite
+              </button>
+            </form>
+          </div>
+
+          <hr className="border-gray-800" />
+
+          <div>
+            <h2 className="text-lg font-semibold mb-4 text-red-400">Purge Old Users</h2>
+            <p className="text-sm text-gray-500 mb-3">Delete all users who joined before a given date.</p>
+            <div className="flex gap-3">
+              <input
+                type="date"
+                value={purgeBefore}
+                onChange={(e) => setPurgeBefore(e.target.value)}
+                className="bg-gray-800 border border-gray-700 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-red-500 transition"
+              />
+              <button
+                onClick={handlePurge}
+                disabled={purging}
+                className="bg-red-700 hover:bg-red-600 disabled:opacity-50 px-6 py-2.5 rounded-xl text-sm font-medium transition"
+              >
+                {purging ? "Purging..." : "Purge"}
+              </button>
+            </div>
+          </div>
         </div>
       )}
 

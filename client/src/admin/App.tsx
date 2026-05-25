@@ -1,6 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import { getAuthInstance } from "../lib/firebase";
 import AdminLogin from "./pages/Login";
 import AdminDashboard from "../pages/AdminDashboard";
 import AdminProducts from "../pages/AdminProducts";
@@ -10,18 +9,6 @@ import AdminUsers from "../pages/AdminUsers";
 import Forbidden from "../pages/Forbidden";
 
 const base = "/" + (window.location.pathname.split("/").filter(Boolean)[0] || "admin");
-
-(window as any).purgeUsers = async (before: string) => {
-  const auth = await getAuthInstance();
-  const token = await auth.currentUser?.getIdToken();
-  if (!token) return console.error("Not logged in");
-  const r = await fetch("/api/admin/users/purge", {
-    method: "POST",
-    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ before }),
-  });
-  console.log(await r.json());
-};
 
 const base = "/" + (window.location.pathname.split("/").filter(Boolean)[0] || "admin");
 
