@@ -110,28 +110,34 @@ export default function AdminUsers() {
               </div>
               {u.id !== me?.id ? (
                 <div className="flex items-center gap-2">
-                  <select
-                    value={u.role}
-                    onChange={(e) => handleRoleChange(u.id, e.target.value)}
-                    className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-1.5 text-sm"
-                  >
-                    <option value="LOW">LOW</option>
-                    <option value="MID">MID</option>
-                  </select>
-                  {u.role === "MID" && (
-                    <button
-                      onClick={() => {
-                        if (window.confirm(`Demote ${u.email} to regular user?`)) {
-                          api.delete(`/admin/users/${u.id}`)
-                            .then(() => { toast.success("User demoted"); fetchUsers(); })
-                            .catch((err) => toast.error((err as Error).message));
-                        }
-                      }}
-                      className="text-red-500 hover:text-red-400 text-sm px-2 py-1.5 rounded-lg hover:bg-red-900/20 transition"
-                      title="Demote to regular user"
-                    >
-                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                    </button>
+                  {isSuper ? (
+                    <>
+                      <select
+                        value={u.role}
+                        onChange={(e) => handleRoleChange(u.id, e.target.value)}
+                        className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-1.5 text-sm"
+                      >
+                        <option value="LOW">LOW</option>
+                        <option value="MID">MID</option>
+                      </select>
+                      {u.role === "MID" && (
+                        <button
+                          onClick={() => {
+                            if (window.confirm(`Demote ${u.email} to regular user?`)) {
+                              api.delete(`/admin/users/${u.id}`)
+                                .then(() => { toast.success("User demoted"); fetchUsers(); })
+                                .catch((err) => toast.error((err as Error).message));
+                            }
+                          }}
+                          className="text-red-500 hover:text-red-400 text-sm px-2 py-1.5 rounded-lg hover:bg-red-900/20 transition"
+                          title="Demote to regular user"
+                        >
+                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                        </button>
+                      )}
+                    </>
+                  ) : (
+                    <span className="text-xs text-gray-500">View only</span>
                   )}
                 </div>
               ) : (
