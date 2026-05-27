@@ -164,6 +164,7 @@ export async function uploadAccounts(req: AuthRequest, res: Response): Promise<v
     try {
       const credId = `${account.provider.toLowerCase()}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
       const credData: Record<string, unknown> = {
+        id: credId,
         provider: account.provider,
         email: account.email,
         password: account.password,
