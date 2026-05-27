@@ -14,6 +14,7 @@ router.patch("/orders/:id/cancel", admin.cancelOrder);
 router.delete("/orders/:id", admin.deleteOrder);
 router.post("/accounts/upload", validate(admin.uploadAccountsSchema), admin.uploadAccounts);
 router.get("/accounts", admin.listAccountPool);
+router.delete("/accounts/:id", admin.deleteAccountCredential);
 
 router.get("/users", admin.getUsers);
 router.patch("/users/:id/role", requireSuperAdmin, validate(admin.updateRoleSchema), admin.updateUserRole);

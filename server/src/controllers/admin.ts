@@ -382,6 +382,17 @@ export async function listAccountPool(req: AuthRequest, res: Response): Promise<
   res.json(accounts);
 }
 
+export async function deleteAccountCredential(req: AuthRequest, res: Response): Promise<void> {
+  const { id } = req.params;
+  const cred = await vault.getCredential(id);
+  if (!cred) {
+    res.status(404).json({ error: "Credential not found" });
+    return;
+  }
+  await vault.deleteCredential(id);
+  res.json({ deleted: true });
+}
+
 export async function handlePayoutCallback(req: Request, res: Response): Promise<void> {
   const auth = req.headers.authorization;
   if (auth !== `Bearer ${process.env.INTERNAL_API_KEY}`) {

@@ -73,11 +73,11 @@ export default function AdminProducts() {
     }
   };
 
-  const handleDelete = async (p: Product) => {
-    if (!confirm(`Delete "${p.name}"?\n\nVault has ${p.stock} credential(s) for provider ${p.provider}. The product will be removed but credentials remain unchanged.`)) return;
+  const handleDeactivate = async (p: Product) => {
+    if (!confirm(`Deactivate "${p.name}"?\n\nVault has ${p.stock} credential(s) for provider ${p.provider}. The product will be hidden from the storefront.`)) return;
     try {
       await api.delete(`/products/${p.id}`);
-      toast.success("Deleted");
+      toast.success("Deactivated");
       fetchProducts();
     } catch (err) {
       toast.error((err as Error).message);
@@ -201,9 +201,13 @@ export default function AdminProducts() {
                 <button onClick={() => startEdit(p)} className="text-blue-400 hover:text-blue-300 text-sm transition">
                   Edit
                 </button>
-                <button onClick={() => handleDelete(p)} className="text-red-400 hover:text-red-300 text-sm transition">
-                  Delete
-                </button>
+                {p.active ? (
+                  <button onClick={() => handleDeactivate(p)} className="text-red-400 hover:text-red-300 text-sm transition">
+                    Deactivate
+                  </button>
+                ) : (
+                  <span className="text-xs text-gray-500">Archived</span>
+                )}
               </div>
             </div>
           ))}

@@ -39,6 +39,17 @@ export default function AdminAccounts() {
   const [bulkJson, setBulkJson] = useState("");
   const [search, setSearch] = useState("");
 
+  const handleDeleteCred = async (path: string) => {
+    if (!confirm("Delete this credential from the vault?")) return;
+    try {
+      await api.delete(`/admin/accounts/${path}`);
+      toast.success("Credential deleted");
+      fetchAccounts();
+    } catch (err) {
+      toast.error((err as Error).message);
+    }
+  };
+
   const fetchAccounts = () => {
     setLoading(true);
     api.get<AccountEntry[]>("/admin/accounts")
@@ -273,9 +284,16 @@ export default function AdminAccounts() {
                 </span>
                 <span className="text-gray-300">{acc.email}</span>
               </div>
-              <span className={`text-xs font-medium ${acc.claimed ? "text-amber-400" : "text-green-400"}`}>
-                {acc.claimed ? `Claimed ${acc.claimedAt ? new Date(acc.claimedAt).toLocaleDateString() : ""}` : "Available"}
-              </span>
+              <div className="flex items-center gap-3">
+                <span className={`text-xs font-medium ${acc.claimed ? "text-amber-400" : "text-green-400"}`}>
+                  {acc.claimed ? `Claimed ${acc.claimedAt ? new Date(acc.claimedAt).toLocaleDateString() : ""}` : "Available"}
+                </span>
+                {!acc.claimed && (
+                  <button onClick={() => handleDeleteCred(acc.path)} className="text-red-400 hover:text-red-300 text-xs transition">
+                    Delete
+                  </button>
+                )}
+              </div>
             </div>
           ))}
         </div>

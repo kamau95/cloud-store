@@ -80,6 +80,9 @@ export async function deleteProduct(req: AuthRequest, res: Response): Promise<vo
     return;
   }
 
-  await prisma.product.delete({ where: { id: req.params.id } });
-  res.status(204).send();
+  await prisma.product.update({
+    where: { id: req.params.id },
+    data: { active: false },
+  });
+  res.json({ deactivated: true });
 }
