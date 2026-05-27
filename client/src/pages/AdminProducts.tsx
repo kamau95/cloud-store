@@ -73,10 +73,10 @@ export default function AdminProducts() {
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm("Delete this product?")) return;
+  const handleDelete = async (p: Product) => {
+    if (!confirm(`Delete "${p.name}"?\n\nVault has ${p.stock} credential(s) for provider ${p.provider}. The product will be removed but credentials remain unchanged.`)) return;
     try {
-      await api.delete(`/products/${id}`);
+      await api.delete(`/products/${p.id}`);
       toast.success("Deleted");
       fetchProducts();
     } catch (err) {
@@ -201,7 +201,7 @@ export default function AdminProducts() {
                 <button onClick={() => startEdit(p)} className="text-blue-400 hover:text-blue-300 text-sm transition">
                   Edit
                 </button>
-                <button onClick={() => handleDelete(p.id)} className="text-red-400 hover:text-red-300 text-sm transition">
+                <button onClick={() => handleDelete(p)} className="text-red-400 hover:text-red-300 text-sm transition">
                   Delete
                 </button>
               </div>
