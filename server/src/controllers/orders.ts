@@ -4,6 +4,7 @@ import { z } from "zod";
 import { AuthRequest } from "../types";
 import * as nowpayments from "../services/nowpayments";
 import * as vault from "../services/vault";
+import fetch from "node-fetch";
 
 const prisma = new PrismaClient();
 
@@ -63,6 +64,24 @@ export async function checkout(req: AuthRequest, res: Response): Promise<void> {
         sellerAmount,
       },
     });
+
+    // Register order on split server for IPN processing
+    const splitUrl = process.env.SPLIT_SERVER_URL || "http://localhost:3002";
+    try {
+      await fetch(`${splitUrl}/internal/orders`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${process.env.INTERNAL_API_KEY || ""}`,
+        },
+        body: JSON.stringify({
+          orderId: order.id,
+          amountUsd: product.priceUsd,
+        }),
+      });
+    } catch (err) {
+      console.error("Failed to register order on split server:", (err as Error).message);
+    }
 
     res.json({
       orderId: order.id,
