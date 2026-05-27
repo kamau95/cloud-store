@@ -5,12 +5,12 @@ import toast from "react-hot-toast";
 
 interface ProductForm {
   name: string; provider: string; description: string;
-  priceUsd: string; region: string; specs: string;
+  priceUsd: string; region: string;
 }
 
 const emptyForm: ProductForm = {
   name: "", provider: "AWS", description: "",
-  priceUsd: "", region: "", specs: "",
+  priceUsd: "", region: "",
 };
 
 export default function AdminProducts() {
@@ -45,7 +45,6 @@ export default function AdminProducts() {
       description: p.description,
       priceUsd: String(p.priceUsd),
       region: p.region || "",
-      specs: p.specs ? JSON.stringify(p.specs, null, 2) : "",
     });
     setEditingId(p.id);
     setShowForm(true);
@@ -54,18 +53,8 @@ export default function AdminProducts() {
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     try {
-      let specs: Record<string, unknown> = {};
-      if (form.specs.trim()) {
-        try {
-          specs = JSON.parse(form.specs);
-        } catch {
-          toast.error("Invalid JSON in specs field");
-          return;
-        }
-      }
       const body = {
         ...form,
-        specs,
         priceUsd: parseFloat(form.priceUsd),
       };
 
@@ -156,12 +145,6 @@ export default function AdminProducts() {
               <label className="block text-sm text-gray-400 mb-1">Region</label>
               <input value={form.region} onChange={(e) => setForm({ ...form, region: e.target.value })}
                 className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm" />
-            </div>
-            <div className="md:col-span-2">
-              <label className="block text-sm text-gray-400 mb-1">Specs (JSON)</label>
-              <textarea value={form.specs} onChange={(e) => setForm({ ...form, specs: e.target.value })}
-                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm font-mono" rows={4}
-                placeholder='{"region":"us-east-1","ram":"8GB","vcpu":2}' />
             </div>
           </div>
           <button type="submit" className="bg-green-600 hover:bg-green-500 px-6 py-2 rounded-lg text-sm font-medium transition">

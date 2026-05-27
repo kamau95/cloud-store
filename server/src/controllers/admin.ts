@@ -150,7 +150,6 @@ export const uploadAccountsSchema = z.object({
       accessKey: z.string().optional(),
       secretKey: z.string().optional(),
       region: z.string().optional(),
-      specs: z.record(z.unknown()).optional(),
       sellerId: z.string().optional(),
     })
   ),
@@ -172,7 +171,6 @@ export async function uploadAccounts(req: AuthRequest, res: Response): Promise<v
         accessKey: account.accessKey,
         secretKey: account.secretKey,
         region: account.region,
-        specs: account.specs,
         sellerId: account.sellerId || null,
       };
       await prisma.credential.create({ data: credData as any });

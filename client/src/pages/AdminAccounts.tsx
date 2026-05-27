@@ -65,7 +65,6 @@ export default function AdminAccounts() {
           ...(form.accessKey && { accessKey: form.accessKey }),
           ...(form.secretKey && { secretKey: form.secretKey }),
           ...(form.region && { region: form.region }),
-          specs: {},
         }],
       };
       const data = await api.post("/admin/accounts/upload", payload);

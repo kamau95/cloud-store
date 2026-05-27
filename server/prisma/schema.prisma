@@ -55,7 +55,6 @@ model Product {
   description String
   priceUsd    Float
   region      String?
-  specs       Json?
   stock       Int      @default(0)
   active      Boolean  @default(true)
   createdAt   DateTime @default(now())
@@ -101,7 +100,6 @@ model Credential {
   accessKey String?
   secretKey String?
   region    String?
-  specs     Json?
   claimed   Boolean   @default(false)
   claimedAt DateTime?
   sellerId  String?

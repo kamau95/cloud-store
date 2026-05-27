@@ -60,19 +60,6 @@ export default function ProductDetail() {
           <div className="text-sm text-gray-500 mb-2">{product.provider}</div>
           <h1 className="text-3xl font-bold mb-4">{product.name}</h1>
           <p className="text-gray-400 mb-6">{product.description}</p>
-          {product.specs && (
-            <div className="border border-gray-800 rounded-xl p-4 mb-6">
-              <h3 className="text-sm font-semibold text-gray-300 mb-3">Specifications</h3>
-              {Object.entries(product.specs).map(([key, value]) => (
-                <div key={key} className="flex justify-between py-1.5 text-sm">
-                  <span className="text-gray-500 capitalize">{key.replace(/([A-Z])/g, ' $1')}</span>
-                  <span className="text-gray-300">
-                    {Array.isArray(value) ? value.join(", ") : String(value)}
-                  </span>
-                </div>
-              ))}
-            </div>
-          )}
           {product.region && (
             <p className="text-sm text-gray-500">Region: <span className="text-gray-300">{product.region}</span></p>
           )}

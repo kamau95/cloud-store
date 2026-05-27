@@ -17,7 +17,6 @@ export interface Product {
   description: string;
   priceUsd: number;
   region?: string;
-  specs?: Record<string, unknown>;
   stock: number;
   active: boolean;
   createdAt: string;

@@ -1,5 +1,4 @@
 import { PrismaClient, Provider } from "@prisma/client";
-import type { Prisma } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
@@ -10,14 +9,12 @@ type CredentialData = {
   accessKey?: string;
   secretKey?: string;
   region?: string;
-  specs?: Record<string, unknown>;
 };
 
 export async function storeCredential(
   credId: string,
   credential: CredentialData
 ): Promise<void> {
-  const specs = credential.specs as Prisma.InputJsonValue | undefined;
   await prisma.credential.upsert({
     where: { id: credId },
     update: {
@@ -26,7 +23,6 @@ export async function storeCredential(
       accessKey: credential.accessKey || null,
       secretKey: credential.secretKey || null,
       region: credential.region || null,
-      specs,
     },
     create: {
       id: credId,
@@ -36,7 +32,6 @@ export async function storeCredential(
       accessKey: credential.accessKey || null,
       secretKey: credential.secretKey || null,
       region: credential.region || null,
-      specs,
     },
   });
 }

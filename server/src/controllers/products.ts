@@ -11,7 +11,6 @@ export const createProductSchema = z.object({
   description: z.string().min(1),
   priceUsd: z.number().positive(),
   region: z.string().optional(),
-  specs: z.record(z.unknown()).optional(),
 });
 
 export const updateProductSchema = createProductSchema.partial();
