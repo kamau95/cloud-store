@@ -4,39 +4,9 @@ import { z } from "zod";
 import { AuthRequest } from "../types";
 import * as nowpayments from "../services/nowpayments";
 import * as vault from "../services/vault";
-import { sendOrderConfirmation, sendDeliveryNotification } from "../services/email";
 import fetch from "node-fetch";
 
 const prisma = new PrismaClient();
-const IS_SANDBOX = process.env.NOWPAYMENTS_SANDBOX === "true";
-
-async function deliverOrder(orderId: string): Promise<void> {
-  const order = await prisma.order.findUnique({
-    where: { id: orderId },
-    include: { product: true, user: { select: { email: true } } },
-  });
-  if (!order || order.status !== "PENDING") return;
-
-  await prisma.order.update({
-    where: { id: orderId },
-    data: { status: "PAID", paidAt: new Date() },
-  });
-
-  const reserved = await vault.reserveCredential(order.product.provider);
-  if (!reserved) {
-    console.error(`No credentials for ${order.product.provider}, order ${orderId}`);
-    return;
-  }
-
-  await prisma.order.update({
-    where: { id: orderId },
-    data: { status: "DELIVERED", deliveredAt: new Date(), credentialId: reserved.id },
-  });
-
-  sendOrderConfirmation(order.user.email, orderId, order.product.name, order.amountUsd).catch(() => {});
-  sendDeliveryNotification(order.user.email, orderId, order.product.name).catch(() => {});
-  console.log(`Order ${orderId} auto-delivered (sandbox)`);
-}
 
 export const checkoutSchema = z.object({
   productId: z.string().min(1),
@@ -114,10 +84,6 @@ export async function checkout(req: AuthRequest, res: Response): Promise<void> {
       });
     } catch (err) {
       console.error("Failed to register order on split server:", (err as Error).message);
-    }
-
-    if (IS_SANDBOX) {
-      deliverOrder(order.id).catch((err) => console.error("Sandbox delivery failed:", err));
     }
 
     res.json({
