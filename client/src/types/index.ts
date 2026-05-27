@@ -33,6 +33,8 @@ export interface Order {
   paymentProvider: "GATEWAYCRYPTO" | "PAYMENTO" | "NOWPAYMENTS" | null;
   paymentChargeId: string | null;
   amountUsd: number;
+  displayedNetworkFee?: number | null;
+  payoutTxid?: string | null;
   paidAt: string | null;
   deliveredAt: string | null;
   createdAt: string;

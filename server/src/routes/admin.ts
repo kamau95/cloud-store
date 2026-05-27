@@ -22,4 +22,6 @@ router.post("/users/invite", requireSuperAdmin, validate(admin.inviteAdminSchema
 router.post("/users/purge", requireSuperAdmin, validate(admin.purgeUsersSchema), admin.purgeUsers);
 router.get("/fees", requireSuperAdmin, admin.getFeeSummary);
 
+router.patch("/users/:id/wallet", requireSuperAdmin, validate(admin.updateWalletSchema), admin.updateUserWallet);
+
 export default router;

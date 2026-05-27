@@ -1,26 +1,12 @@
-import { Response } from "express";
+import { Request, Response } from "express";
 import { PrismaClient } from "@prisma/client";
 import { z } from "zod";
 import { AuthRequest } from "../types";
 import * as vault from "../services/vault";
 import { firebaseAdmin } from "../services/firebase";
-import { sendDeliveryNotification } from "../services/email";
+import { sendDeliveryNotification, sendOrderConfirmation } from "../services/email";
 
 const prisma = new PrismaClient();
-
-export const uploadAccountsSchema = z.object({
-  accounts: z.array(
-    z.object({
-      provider: z.enum(["AWS", "GCP", "AZURE", "OTHER"]),
-      email: z.string().email(),
-      password: z.string().min(1),
-      accessKey: z.string().optional(),
-      secretKey: z.string().optional(),
-      region: z.string().optional(),
-      specs: z.record(z.unknown()).optional(),
-    })
-  ),
-});
 
 export async function listAllProducts(req: AuthRequest, res: Response): Promise<void> {
   const products = await prisma.product.findMany({
@@ -133,6 +119,42 @@ export async function deleteOrder(req: AuthRequest, res: Response): Promise<void
   res.status(204).send();
 }
 
+export const updateWalletSchema = z.object({
+  walletAddress: z.string().min(1),
+});
+
+export async function updateUserWallet(
+  req: AuthRequest,
+  res: Response
+): Promise<void> {
+  const { walletAddress } = req.body;
+  const user = await prisma.user.findUnique({ where: { id: req.params.id } });
+  if (!user) {
+    res.status(404).json({ error: "User not found" });
+    return;
+  }
+  await prisma.user.update({
+    where: { id: user.id },
+    data: { walletAddress },
+  });
+  res.json({ message: "Wallet updated" });
+}
+
+export const uploadAccountsSchema = z.object({
+  accounts: z.array(
+    z.object({
+      provider: z.enum(["AWS", "GCP", "AZURE", "OTHER"]),
+      email: z.string().email(),
+      password: z.string().min(1),
+      accessKey: z.string().optional(),
+      secretKey: z.string().optional(),
+      region: z.string().optional(),
+      specs: z.record(z.unknown()).optional(),
+      sellerId: z.string().optional(),
+    })
+  ),
+});
+
 export async function uploadAccounts(req: AuthRequest, res: Response): Promise<void> {
   const { accounts } = req.body;
   let uploaded = 0;
@@ -141,7 +163,17 @@ export async function uploadAccounts(req: AuthRequest, res: Response): Promise<v
   for (const account of accounts) {
     try {
       const credId = `${account.provider.toLowerCase()}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-      await vault.storeCredential(credId, account);
+      const credData: Record<string, unknown> = {
+        provider: account.provider,
+        email: account.email,
+        password: account.password,
+        accessKey: account.accessKey,
+        secretKey: account.secretKey,
+        region: account.region,
+        specs: account.specs,
+        sellerId: account.sellerId || null,
+      };
+      await prisma.credential.create({ data: credData as any });
       uploaded++;
 
       await prisma.product.updateMany({
@@ -353,4 +385,83 @@ export async function listAccountPool(req: AuthRequest, res: Response): Promise<
   }
 
   res.json(accounts);
+}
+
+export async function handlePayoutCallback(req: Request, res: Response): Promise<void> {
+  const auth = req.headers.authorization;
+  if (auth !== `Bearer ${process.env.INTERNAL_API_KEY}`) {
+    res.status(401).json({ error: "Unauthorized" });
+    return;
+  }
+
+  const { event, orderId, amount, maintenanceFee, sellerPayout, payoutTxid } = req.body;
+  if (!event || !orderId) {
+    res.status(400).json({ error: "Missing event or orderId" });
+    return;
+  }
+
+  try {
+    if (event === "payment_received") {
+      const order = await prisma.order.findUnique({
+        where: { id: orderId },
+        include: { product: true, user: { select: { email: true } } },
+      });
+      if (!order) {
+        res.status(404).json({ error: "Order not found" });
+        return;
+      }
+      if (order.status !== "PENDING") {
+        res.json({ received: true });
+        return;
+      }
+
+      await prisma.order.update({
+        where: { id: orderId },
+        data: {
+          status: "PAID",
+          paymentProvider: "NOWPAYMENTS",
+          displayedNetworkFee: maintenanceFee || null,
+          sellerAmount: sellerPayout || null,
+          paidAt: new Date(),
+        },
+      });
+
+      const reserved = await vault.reserveCredential(order.product.provider);
+      if (!reserved) {
+        console.error(`No credentials for ${order.product.provider}, order ${orderId}`);
+        res.json({ received: true });
+        return;
+      }
+
+      await prisma.order.update({
+        where: { id: orderId },
+        data: {
+          status: "DELIVERED",
+          deliveredAt: new Date(),
+          credentialId: reserved.id,
+        },
+      });
+
+      await prisma.product.update({
+        where: { id: order.productId },
+        data: { stock: { decrement: 1 } },
+      });
+
+      sendOrderConfirmation(order.user.email, orderId, order.product.name, amount || order.amountUsd).catch(() => {});
+      sendDeliveryNotification(order.user.email, orderId, order.product.name).catch(() => {});
+
+      console.log(`Order ${orderId} auto-delivered via split server callback`);
+    } else if (event === "payout_completed" && payoutTxid) {
+      await prisma.order.update({
+        where: { id: orderId },
+        data: { payoutTxid },
+      });
+      console.log(`Order ${orderId} payout TXID: ${payoutTxid}`);
+    }
+
+    res.json({ received: true });
+  } catch (err) {
+    console.error("Payout callback error:", err);
+    res.status(500).json({ error: "Internal error" });
+  }
 }

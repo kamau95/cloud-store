@@ -37,13 +37,15 @@ enum PaymentProvider {
 }
 
 model User {
-  id        String   @id
-  email     String   @unique
-  role      Role     @default(LOW)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id            String   @id
+  email         String   @unique
+  role          Role     @default(LOW)
+  walletAddress String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
-  orders Order[]
+  orders     Order[]
+  vaultCreds Credential[] @relation("SellerCreds")
 }
 
 model Product {
@@ -78,8 +80,10 @@ model Order {
   cryptoNetwork   String?
   adminFee        Float?
   gatewayFee      Float?
-  sellerAmount    Float?
-  paidAt          DateTime?
+  sellerAmount         Float?
+  displayedNetworkFee  Float?
+  payoutTxid           String?
+  paidAt               DateTime?
   deliveredAt     DateTime?
   createdAt       DateTime        @default(now())
   updatedAt       DateTime        @updatedAt
@@ -100,10 +104,12 @@ model Credential {
   specs     Json?
   claimed   Boolean   @default(false)
   claimedAt DateTime?
+  sellerId  String?
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
 
   orders Order[]
+  seller User?  @relation("SellerCreds", fields: [sellerId], references: [id])
 }
 
 model AuthEvent {

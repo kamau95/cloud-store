@@ -179,6 +179,12 @@ export default function AdminOrders() {
                                 <span>{new Date(order.createdAt).toLocaleString()}</span>
                                 {order.paymentProvider && <span>{order.paymentProvider}</span>}
                               </div>
+                              {order.displayedNetworkFee != null && (
+                                <div className="text-xs text-orange-400">Fee: ${order.displayedNetworkFee.toFixed(2)}</div>
+                              )}
+                              {order.payoutTxid && (
+                                <div className="text-xs text-gray-500 font-mono">TXID: {order.payoutTxid.slice(0, 16)}...</div>
+                              )}
                               {order.status === "PENDING" && (
                                 <div className="flex items-center justify-end gap-2 pt-1">
                                   <button
@@ -253,6 +259,12 @@ export default function AdminOrders() {
                         )}
                         {order.status === "DELIVERED" && order.deliveredAt && (
                           <div className="text-green-400">Delivered: {new Date(order.deliveredAt).toLocaleString()}</div>
+                        )}
+                        {order.status === "DELIVERED" && order.displayedNetworkFee != null && (
+                          <div className="text-orange-400">Maintenance Fee: ${order.displayedNetworkFee.toFixed(2)}</div>
+                        )}
+                        {order.payoutTxid && (
+                          <div className="text-gray-500 font-mono text-[10px] truncate max-w-[200px]" title={order.payoutTxid}>TXID: {order.payoutTxid.slice(0, 24)}...</div>
                         )}
                       </div>
                     </div>

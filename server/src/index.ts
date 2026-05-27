@@ -8,7 +8,7 @@ import { tokenVersionCheck } from "./middleware/auth";
 import authRoutes from "./routes/auth";
 import productRoutes from "./routes/products";
 import orderRoutes from "./routes/orders";
-import webhookRoutes from "./routes/webhooks";
+import * as admin from "./controllers/admin";
 import adminRoutes from "./routes/admin";
 import passwordRoutes from "./routes/password";
 import { seedDatabase } from "./seed";
@@ -57,8 +57,6 @@ const loginLimiter = rateLimit({
 
 app.use("/api/auth/login", loginLimiter);
 
-app.use("/api/orders/webhook", express.raw({ type: "application/json" }), webhookRoutes);
-
 app.use(express.json());
 
 app.use(tokenVersionCheck);
@@ -70,6 +68,7 @@ app.get("/api/health", (_req, res) => {
 app.use("/api/auth", authRoutes);
 app.use("/api/products", productRoutes);
 app.use("/api/orders", orderRoutes);
+app.post("/api/admin/internal/payout-callback", admin.handlePayoutCallback);
 app.use("/api/admin", adminRoutes);
 app.use("/api/password", passwordRoutes);
 

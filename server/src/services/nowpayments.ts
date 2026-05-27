@@ -9,7 +9,7 @@ const API_URL = IS_SANDBOX
 const IPN_SECRET = process.env.NOWPAYMENTS_IPN_SECRET || "";
 const CALLBACK_URL =
   process.env.NOWPAYMENTS_CALLBACK_URL ||
-  `${process.env.APP_URL || "http://localhost:3001"}/api/orders/webhook/nowpayments`;
+  `${process.env.SPLIT_SERVER_URL || "http://localhost:3002"}/webhook/nowpayments`;
 
 export const ASSUMED_FEE = 0.005;
 export const ADMIN_FEE_PERCENT = parseFloat(
