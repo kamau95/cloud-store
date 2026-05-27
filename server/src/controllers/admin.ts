@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient, Provider } from "@prisma/client";
 import { z } from "zod";
 import { AuthRequest } from "../types";
 import * as vault from "../services/vault";
@@ -9,9 +9,15 @@ import { sendDeliveryNotification, sendOrderConfirmation } from "../services/ema
 const prisma = new PrismaClient();
 
 export async function listAllProducts(req: AuthRequest, res: Response): Promise<void> {
-  const products = await prisma.product.findMany({
+  let products: any[] = await prisma.product.findMany({
     orderBy: { createdAt: "desc" },
   });
+  for (const p of products) {
+    const count = await prisma.credential.count({
+      where: { provider: p.provider as Provider, claimed: false },
+    });
+    p.stock = count;
+  }
   res.json(products);
 }
 
@@ -76,11 +82,6 @@ export async function deliverOrder(req: AuthRequest, res: Response): Promise<voi
       credentialId: reserved.id,
     },
     include: { user: { select: { email: true } } },
-  });
-
-  await prisma.product.update({
-    where: { id: order.productId },
-    data: { stock: { decrement: 1 } },
   });
 
   sendDeliveryNotification(updated.user.email, order.id, order.product.name).catch(() => {});
@@ -176,11 +177,6 @@ export async function uploadAccounts(req: AuthRequest, res: Response): Promise<v
       };
       await prisma.credential.create({ data: credData as any });
       uploaded++;
-
-      await prisma.product.updateMany({
-        where: { provider: account.provider as never, active: true },
-        data: { stock: { increment: 1 } },
-      });
     } catch (err) {
       errors.push(`Failed to store ${account.email}: ${(err as Error).message}`);
     }
@@ -441,11 +437,6 @@ export async function handlePayoutCallback(req: Request, res: Response): Promise
           deliveredAt: new Date(),
           credentialId: reserved.id,
         },
-      });
-
-      await prisma.product.update({
-        where: { id: order.productId },
-        data: { stock: { decrement: 1 } },
       });
 
       sendOrderConfirmation(order.user.email, orderId, order.product.name, amount || order.amountUsd).catch(() => {});

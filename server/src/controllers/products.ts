@@ -17,6 +17,16 @@ export const createProductSchema = z.object({
 
 export const updateProductSchema = createProductSchema.partial();
 
+async function enrichStock(products: Array<Record<string, unknown>>): Promise<Array<Record<string, unknown>>> {
+  for (const p of products) {
+    const count = await prisma.credential.count({
+      where: { provider: p.provider as Provider, claimed: false },
+    });
+    p.stock = count;
+  }
+  return products;
+}
+
 export async function listProducts(req: AuthRequest, res: Response): Promise<void> {
   const { provider } = req.query;
   const where: Record<string, unknown> = { active: true };
@@ -27,7 +37,7 @@ export async function listProducts(req: AuthRequest, res: Response): Promise<voi
     orderBy: { createdAt: "desc" },
   });
 
-  res.json(products);
+  res.json(await enrichStock(products));
 }
 
 export async function getProduct(req: AuthRequest, res: Response): Promise<void> {
@@ -40,7 +50,8 @@ export async function getProduct(req: AuthRequest, res: Response): Promise<void>
     return;
   }
 
-  res.json(product);
+  const enriched = await enrichStock([product]);
+  res.json(enriched[0]);
 }
 
 export async function createProduct(req: AuthRequest, res: Response): Promise<void> {

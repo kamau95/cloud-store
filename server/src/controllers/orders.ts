@@ -1,5 +1,5 @@
 import { Response } from "express";
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient, Provider } from "@prisma/client";
 import { z } from "zod";
 import { AuthRequest } from "../types";
 import * as nowpayments from "../services/nowpayments";
@@ -21,7 +21,10 @@ export async function checkout(req: AuthRequest, res: Response): Promise<void> {
     res.status(404).json({ error: "Product not found or unavailable" });
     return;
   }
-  if (product.stock < 1) {
+  const availableCreds = await prisma.credential.count({
+    where: { provider: product.provider as Provider, claimed: false },
+  });
+  if (availableCreds < 1) {
     res.status(400).json({ error: "Out of stock" });
     return;
   }
