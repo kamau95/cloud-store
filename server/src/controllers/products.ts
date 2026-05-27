@@ -53,7 +53,13 @@ export async function getProduct(req: AuthRequest, res: Response): Promise<void>
 }
 
 export async function createProduct(req: AuthRequest, res: Response): Promise<void> {
-  const product = await prisma.product.create({ data: { ...req.body, stock: 0 } });
+  const product = await prisma.product.create({
+    data: {
+      id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      ...req.body,
+      stock: 0,
+    },
+  });
   res.status(201).json(product);
 }
 
