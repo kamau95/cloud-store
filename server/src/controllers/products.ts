@@ -12,7 +12,6 @@ export const createProductSchema = z.object({
   priceUsd: z.number().positive(),
   region: z.string().optional(),
   specs: z.record(z.unknown()).optional(),
-  stock: z.number().int().min(0).default(0),
 });
 
 export const updateProductSchema = createProductSchema.partial();
@@ -55,7 +54,7 @@ export async function getProduct(req: AuthRequest, res: Response): Promise<void>
 }
 
 export async function createProduct(req: AuthRequest, res: Response): Promise<void> {
-  const product = await prisma.product.create({ data: req.body });
+  const product = await prisma.product.create({ data: { ...req.body, stock: 0 } });
   res.status(201).json(product);
 }
 
@@ -66,9 +65,10 @@ export async function updateProduct(req: AuthRequest, res: Response): Promise<vo
     return;
   }
 
+  const { stock: _, ...data } = req.body;
   const product = await prisma.product.update({
     where: { id: req.params.id },
-    data: req.body,
+    data,
   });
 
   res.json(product);

@@ -5,12 +5,12 @@ import toast from "react-hot-toast";
 
 interface ProductForm {
   name: string; provider: string; description: string;
-  priceUsd: string; region: string; stock: string; specs: string;
+  priceUsd: string; region: string; specs: string;
 }
 
 const emptyForm: ProductForm = {
   name: "", provider: "AWS", description: "",
-  priceUsd: "", region: "", stock: "0", specs: "",
+  priceUsd: "", region: "", specs: "",
 };
 
 export default function AdminProducts() {
@@ -45,7 +45,6 @@ export default function AdminProducts() {
       description: p.description,
       priceUsd: String(p.priceUsd),
       region: p.region || "",
-      stock: String(p.stock),
       specs: p.specs ? JSON.stringify(p.specs, null, 2) : "",
     });
     setEditingId(p.id);
@@ -68,7 +67,6 @@ export default function AdminProducts() {
         ...form,
         specs,
         priceUsd: parseFloat(form.priceUsd),
-        stock: parseInt(form.stock),
       };
 
       if (editingId) {
@@ -155,11 +153,6 @@ export default function AdminProducts() {
                 className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm" required />
             </div>
             <div>
-              <label className="block text-sm text-gray-400 mb-1">Stock</label>
-              <input type="number" value={form.stock} onChange={(e) => setForm({ ...form, stock: e.target.value })}
-                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm" />
-            </div>
-            <div>
               <label className="block text-sm text-gray-400 mb-1">Region</label>
               <input value={form.region} onChange={(e) => setForm({ ...form, region: e.target.value })}
                 className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm" />
@@ -218,7 +211,7 @@ export default function AdminProducts() {
                 <span className="text-sm text-gray-500 ml-2">{p.provider}</span>
                 <span className="text-sm text-gray-600 ml-2">${p.priceUsd}</span>
                 <span className={`text-xs ml-2 ${p.stock > 0 ? "text-green-400" : "text-red-400"}`}>
-                  Stock: {p.stock}
+                  {p.stock > 0 ? `${p.stock} in vault` : "No credentials"}
                 </span>
               </div>
               <div className="flex items-center gap-2 mt-2 md:mt-0 md:ml-4">
