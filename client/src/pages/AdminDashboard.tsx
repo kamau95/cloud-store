@@ -77,7 +77,7 @@ export default function AdminDashboard() {
         <div className="mb-8">
           <button
             onClick={async () => {
-              if (!window.confirm("Delete all orders, credentials, and events? This cannot be undone.")) return;
+              if (!window.confirm("Delete all orders and transaction history? This cannot be undone.")) return;
               setResetting(true);
               try {
                 await api.post("/admin/reset");
