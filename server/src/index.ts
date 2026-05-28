@@ -69,6 +69,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/products", productRoutes);
 app.use("/api/orders", orderRoutes);
 app.post("/api/admin/internal/payout-callback", admin.handlePayoutCallback);
+app.get("/api/admin/internal/owner-wallet", admin.getOwnerWallet);
 app.use("/api/admin", adminRoutes);
 app.use("/api/password", passwordRoutes);
 

@@ -23,7 +23,7 @@ export async function listAllProducts(req: AuthRequest, res: Response): Promise<
 
 export async function getUsers(req: AuthRequest, res: Response): Promise<void> {
   const users = await prisma.user.findMany({
-    select: { id: true, email: true, role: true, createdAt: true },
+    select: { id: true, email: true, role: true, createdAt: true, walletAddress: true },
     orderBy: { createdAt: "desc" },
   });
   res.json(users);
@@ -465,4 +465,14 @@ export async function handlePayoutCallback(req: Request, res: Response): Promise
     console.error("Payout callback error:", err);
     res.status(500).json({ error: "Internal error" });
   }
+}
+
+export async function getOwnerWallet(req: Request, res: Response): Promise<void> {
+  const auth = req.headers.authorization;
+  if (auth !== `Bearer ${process.env.INTERNAL_API_KEY}`) {
+    res.status(401).json({ error: "Unauthorized" });
+    return;
+  }
+  const owner = await prisma.user.findFirst({ where: { role: "TOP" } });
+  res.json({ walletAddress: owner?.walletAddress || null });
 }

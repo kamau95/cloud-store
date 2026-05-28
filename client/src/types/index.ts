@@ -3,6 +3,7 @@ export interface User {
   email: string;
   role: "LOW" | "MID" | "TOP";
   createdAt?: string;
+  walletAddress?: string;
 }
 
 export interface AuthResponse {

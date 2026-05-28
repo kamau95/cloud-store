@@ -8,6 +8,7 @@ interface AppUser {
   email: string;
   role: "LOW" | "MID" | "TOP";
   createdAt?: string;
+  walletAddress?: string | null;
 }
 
 export default function AdminUsers() {
@@ -19,11 +20,19 @@ export default function AdminUsers() {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [purgeBefore, setPurgeBefore] = useState("2026-05-23");
   const [purging, setPurging] = useState(false);
+  const [ownerWallet, setOwnerWallet] = useState("");
+  const [savingWallet, setSavingWallet] = useState(false);
 
   const fetchUsers = () => {
     setLoading(true);
     api.get<AppUser[]>("/admin/users")
-      .then((all) => setUsers(isSuper ? all : all.filter((u) => u.role !== "TOP")))
+      .then((all) => {
+        setUsers(isSuper ? all : all.filter((u) => u.role !== "TOP"));
+        if (isSuper) {
+          const owner = all.find((u) => u.role === "TOP");
+          if (owner) setOwnerWallet(owner.walletAddress || "");
+        }
+      })
       .catch(console.error)
       .finally(() => setLoading(false));
   };
@@ -50,6 +59,21 @@ export default function AdminUsers() {
       fetchUsers();
     } catch (err) {
       toast.error((err as Error).message);
+    }
+  };
+
+  const handleOwnerWalletSave = async () => {
+    const addr = ownerWallet.trim();
+    if (!addr || !me?.id) return;
+    setSavingWallet(true);
+    try {
+      await api.patch(`/admin/users/${me.id}/wallet`, { walletAddress: addr });
+      toast.success("Owner wallet updated");
+      fetchUsers();
+    } catch (err) {
+      toast.error((err as Error).message);
+    } finally {
+      setSavingWallet(false);
     }
   };
 
@@ -101,6 +125,31 @@ export default function AdminUsers() {
 
       {isSuper && (
         <div className="border border-gray-800 rounded-xl p-6 mb-8 space-y-6">
+          <div>
+            <h2 className="text-lg font-semibold mb-4">Owner Wallet</h2>
+            <p className="text-sm text-gray-500 mb-3">
+              Payout address where seller funds are sent after fee deduction.
+            </p>
+            <div className="flex flex-col md:flex-row gap-3">
+              <input
+                type="text"
+                value={ownerWallet}
+                onChange={(e) => setOwnerWallet(e.target.value)}
+                placeholder="USDT TRC-20 address..."
+                className="flex-1 bg-gray-800 border border-gray-700 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-blue-500 transition font-mono"
+              />
+              <button
+                onClick={handleOwnerWalletSave}
+                disabled={savingWallet || !ownerWallet.trim()}
+                className="bg-blue-600 hover:bg-blue-500 disabled:opacity-50 px-6 py-2.5 rounded-xl text-sm font-medium transition"
+              >
+                {savingWallet ? "Saving..." : "Save"}
+              </button>
+            </div>
+          </div>
+
+          <hr className="border-gray-800" />
+
           <div>
             <h2 className="text-lg font-semibold mb-4">Invite Admin</h2>
             <form onSubmit={handleInvite} className="flex flex-col md:flex-row gap-3">
