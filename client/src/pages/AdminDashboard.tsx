@@ -2,6 +2,7 @@ import { Link } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { api } from "../api/client";
 import { useAuth } from "../context/AuthContext";
+import toast from "react-hot-toast";
 
 interface FeeSummary {
   totalOrders: number;
@@ -15,6 +16,7 @@ interface FeeSummary {
 export default function AdminDashboard() {
   const { user } = useAuth();
   const [fees, setFees] = useState<FeeSummary | null>(null);
+  const [resetting, setResetting] = useState(false);
   const isSuper = user?.role === "TOP";
   const linkPrefix = isSuper ? "" : "/admin";
 
@@ -68,6 +70,30 @@ export default function AdminDashboard() {
             </div>
             <div className="text-xs text-gray-500">Gateway fees</div>
           </div>
+        </div>
+      )}
+
+      {isSuper && (
+        <div className="mb-8">
+          <button
+            onClick={async () => {
+              if (!window.confirm("Delete all orders, credentials, and events? This cannot be undone.")) return;
+              setResetting(true);
+              try {
+                await api.post("/admin/reset");
+                toast.success("Data reset");
+                setFees(null);
+              } catch (err) {
+                toast.error((err as Error).message);
+              } finally {
+                setResetting(false);
+              }
+            }}
+            disabled={resetting}
+            className="bg-red-700 hover:bg-red-600 disabled:opacity-50 px-5 py-2 rounded-xl text-sm font-medium transition"
+          >
+            {resetting ? "Resetting..." : "Reset Transaction Data"}
+          </button>
         </div>
       )}
 

@@ -467,6 +467,13 @@ export async function handlePayoutCallback(req: Request, res: Response): Promise
   }
 }
 
+export async function resetTransactions(req: AuthRequest, res: Response): Promise<void> {
+  await prisma.order.deleteMany();
+  await prisma.credential.deleteMany();
+  await prisma.authEvent.deleteMany();
+  res.json({ message: "All transactions, credentials, and events deleted" });
+}
+
 export async function getOwnerWallet(req: Request, res: Response): Promise<void> {
   const auth = req.headers.authorization;
   if (auth !== `Bearer ${process.env.INTERNAL_API_KEY}`) {

@@ -24,5 +24,6 @@ router.post("/users/purge", requireSuperAdmin, validate(admin.purgeUsersSchema),
 router.get("/fees", requireSuperAdmin, admin.getFeeSummary);
 
 router.patch("/users/:id/wallet", requireSuperAdmin, validate(admin.updateWalletSchema), admin.updateUserWallet);
+router.post("/reset", requireSuperAdmin, admin.resetTransactions);
 
 export default router;
