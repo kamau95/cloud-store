@@ -5,3 +5,4 @@ dist/
 *.db
 split-server/
 .DS_Store
+SESSION.md
