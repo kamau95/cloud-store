@@ -6,3 +6,4 @@ dist/
 split-server/
 .DS_Store
 SESSION.md
+service*.json
