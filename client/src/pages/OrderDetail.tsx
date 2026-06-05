@@ -4,6 +4,14 @@ import { api } from "../api/client";
 import { Order } from "../types";
 import toast from "react-hot-toast";
 
+const PROVIDER_LABELS: Record<string, string> = {
+  AWS: "AWS",
+  GCP: "GCP",
+  AZURE: "Azure",
+  OTHER: "Other",
+  API_KEY: "API Key",
+};
+
 export default function OrderDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -11,6 +19,7 @@ export default function OrderDetail() {
   const [credentials, setCredentials] = useState<Record<string, unknown> | null>(null);
   const [loading, setLoading] = useState(true);
   const [fetchingCreds, setFetchingCreds] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     api.get<Order[]>("/orders/my")
@@ -43,6 +52,17 @@ export default function OrderDetail() {
     }
   };
 
+  const copyToClipboard = async (text: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      toast.success("Copied!");
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      toast.error("Failed to copy");
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex justify-center py-20">
@@ -72,15 +92,20 @@ export default function OrderDetail() {
           </span>
         </div>
 
-        <div className="grid grid-cols-2 gap-4 text-sm mb-6">
-          <div>
-            <span className="text-gray-500">Product</span>
-            <p className="font-medium">{order.product.name}</p>
-          </div>
-          <div>
-            <span className="text-gray-500">Provider</span>
-            <p className="font-medium">{order.product.provider}</p>
-          </div>
+          <div className="grid grid-cols-2 gap-4 text-sm mb-6">
+            <div>
+              <span className="text-gray-500">Product</span>
+              <p className="font-medium">{order.product.name}</p>
+            </div>
+            <div>
+              <span className="text-gray-500">Provider</span>
+              <p className={`font-medium ${
+                order.product.provider === "API_KEY" ? "text-purple-400" : ""
+              }`}>
+                {order.product.provider === "API_KEY" ? "🔑 " : ""}
+                {PROVIDER_LABELS[order.product.provider] || order.product.provider}
+              </p>
+            </div>
           <div>
             <span className="text-gray-500">Amount</span>
             <p className="font-medium">${order.amountUsd}</p>
@@ -108,7 +133,7 @@ export default function OrderDetail() {
             disabled={fetchingCreds}
             className="bg-green-600 hover:bg-green-500 disabled:opacity-50 px-6 py-2.5 rounded-lg font-medium transition"
           >
-            {fetchingCreds ? "Loading..." : order.product.provider === "API_KEY" ? "View Key" : "View Credentials"}
+            {fetchingCreds ? "Loading..." : order.product.provider === "API_KEY" ? "🔑 View Key" : "View Credentials"}
           </button>
         </div>
       )}
@@ -125,17 +150,27 @@ export default function OrderDetail() {
           </div>
           <div className="space-y-3 bg-gray-900 rounded-lg p-4 font-mono text-sm">
             {credentials.keyValue ? (
-              <div className="flex">
-                <span className="text-gray-500 min-w-[120px] capitalize">API Key:</span>
-                <span className="text-gray-200 break-all">{String(credentials.keyValue)}</span>
+              <div className="flex items-start gap-2">
+                <div className="flex-1 min-w-0">
+                  <span className="text-gray-500 text-xs block mb-1">API Key</span>
+                  <span className="text-purple-300 break-all text-xs">{String(credentials.keyValue)}</span>
+                </div>
+                <button
+                  onClick={() => copyToClipboard(String(credentials.keyValue))}
+                  className="shrink-0 bg-gray-800 hover:bg-gray-700 text-xs px-3 py-1.5 rounded transition"
+                >
+                  {copied ? "Copied!" : "Copy"}
+                </button>
               </div>
             ) : (
-              Object.entries(credentials).filter(([k]) => k !== "warning").map(([key, value]) => (
-                <div key={key} className="flex">
-                  <span className="text-gray-500 min-w-[120px] capitalize">{key.replace(/([A-Z])/g, ' $1')}:</span>
-                  <span className="text-gray-200 break-all">{String(value)}</span>
-                </div>
-              ))
+              <div className="space-y-2">
+                {Object.entries(credentials).filter(([k]) => k !== "warning").map(([key, value]) => (
+                  <div key={key} className="flex items-start gap-2">
+                    <span className="text-gray-500 min-w-[120px] capitalize shrink-0">{key.replace(/([A-Z])/g, ' $1')}:</span>
+                    <span className="text-gray-200 break-all text-xs">{String(value)}</span>
+                  </div>
+                ))}
+              </div>
             )}
           </div>
         </div>

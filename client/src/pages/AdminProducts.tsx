@@ -189,13 +189,25 @@ export default function AdminProducts() {
       ) : (
         <div className="space-y-3">
           {filtered.map((p) => (
-            <div key={p.id} className="border border-gray-800 rounded-xl p-4 md:flex md:items-center md:justify-between">
+            <div key={p.id} className={`border rounded-xl p-4 md:flex md:items-center md:justify-between ${
+              p.provider === "API_KEY" ? "border-purple-900/50" : "border-gray-800"
+            }`}>
               <div className="flex-1 min-w-0">
                 <span className="font-medium">{p.name}</span>
-                <span className="text-sm text-gray-500 ml-2">{p.provider}</span>
+                <span className={`text-xs font-medium ml-2 px-2 py-0.5 rounded ${
+                  p.provider === "AWS" ? "bg-orange-900/50 text-orange-300" :
+                  p.provider === "GCP" ? "bg-blue-900/50 text-blue-300" :
+                  p.provider === "AZURE" ? "bg-indigo-900/50 text-indigo-300" :
+                  p.provider === "API_KEY" ? "bg-purple-900/50 text-purple-300" :
+                  "bg-gray-700 text-gray-300"
+                }`}>
+                  {p.provider === "API_KEY" ? "API Key" : p.provider}
+                </span>
                 <span className="text-sm text-gray-600 ml-2">${p.priceUsd}</span>
                 <span className={`text-xs ml-2 ${p.stock > 0 ? "text-green-400" : "text-red-400"}`}>
-                  {p.stock > 0 ? `${p.stock} in vault` : "No credentials"}
+                  {p.stock > 0
+                    ? p.provider === "API_KEY" ? `${p.stock} keys in vault` : `${p.stock} in vault`
+                    : p.provider === "API_KEY" ? "No keys" : "No credentials"}
                 </span>
               </div>
               <div className="flex items-center gap-2 mt-2 md:mt-0 md:ml-4">

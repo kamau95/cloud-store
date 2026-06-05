@@ -3,6 +3,14 @@ import { Link } from "react-router-dom";
 import { api } from "../api/client";
 import { Product } from "../types";
 
+const PROVIDER_LABELS: Record<string, string> = {
+  AWS: "AWS",
+  GCP: "GCP",
+  AZURE: "Azure",
+  OTHER: "Other",
+  API_KEY: "API Key",
+};
+
 const PROVIDER_LOGOS: Record<string, string> = {
   AWS: "☁️",
   GCP: "🔵",
@@ -39,17 +47,24 @@ export default function Products() {
       <div className="flex items-center justify-between mb-8">
         <h1 className="text-3xl font-bold">Products</h1>
         <div className="flex gap-2">
-          {["ALL", "AWS", "GCP", "AZURE", "KEYS"].map((p) => (
+          {[
+            { label: "ALL", icon: "" },
+            { label: "AWS", icon: "☁️" },
+            { label: "GCP", icon: "🔵" },
+            { label: "AZURE", icon: "🟦" },
+            { label: "KEYS", icon: "🔑" },
+          ].map((p) => (
             <button
-              key={p}
-              onClick={() => setFilter(p)}
+              key={p.label}
+              onClick={() => setFilter(p.label)}
               className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
-                filter === p
+                filter === p.label
                   ? "bg-blue-600 text-white"
                   : "bg-gray-800 text-gray-400 hover:text-white"
               }`}
             >
-              {p}
+              {p.icon && <span className="mr-1.5">{p.icon}</span>}
+              {p.label === "KEYS" ? "API Keys" : p.label}
             </button>
           ))}
         </div>
@@ -67,11 +82,15 @@ export default function Products() {
             <Link
               key={product.id}
               to={`/products/${product.id}`}
-              className="border border-gray-800 rounded-xl p-6 hover:border-gray-700 transition group"
+              className={`border rounded-xl p-6 hover:border-gray-700 transition group ${
+                product.provider === "API_KEY"
+                  ? "border-purple-900/50 hover:border-purple-700"
+                  : "border-gray-800"
+              }`}
             >
               <div className="flex items-start justify-between mb-4">
                 <span className={`text-2xl ${PROVIDER_COLORS[product.provider]}`}>
-                  {PROVIDER_LOGOS[product.provider]} {product.provider}
+                  {PROVIDER_LOGOS[product.provider]} {PROVIDER_LABELS[product.provider]}
                 </span>
                 <span className="text-xs bg-gray-800 px-2 py-1 rounded">{product.region || "Global"}</span>
               </div>
@@ -82,7 +101,11 @@ export default function Products() {
               <div className="flex items-center justify-between">
                 <span className="text-2xl font-bold">${product.priceUsd}</span>
                 <span className={`text-xs ${product.stock > 0 ? "text-green-400" : "text-red-400"}`}>
-                  {product.stock > 0 ? `${product.stock} in stock` : "Out of stock"}
+                  {product.stock > 0
+                    ? product.provider === "API_KEY"
+                      ? `${product.stock} keys available`
+                      : `${product.stock} in stock`
+                    : "Out of stock"}
                 </span>
               </div>
             </Link>

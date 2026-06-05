@@ -50,6 +50,8 @@ export default function ProductDetail() {
 
   if (!product) return null;
 
+  const isKey = product.provider === "API_KEY";
+
   return (
     <div className="max-w-4xl mx-auto px-4 py-12">
       <button onClick={() => navigate(-1)} className="text-sm text-gray-400 hover:text-white mb-6 transition">
@@ -57,7 +59,16 @@ export default function ProductDetail() {
       </button>
       <div className="grid md:grid-cols-2 gap-12">
         <div>
-          <div className="text-sm text-gray-500 mb-2">{product.provider}</div>
+          <span className={`inline-block text-xs font-medium px-2.5 py-1 rounded-full mb-3 ${
+            isKey
+              ? "bg-purple-900/50 text-purple-300 border border-purple-700/50"
+              : product.provider === "AWS" ? "bg-orange-900/50 text-orange-300 border border-orange-700/50"
+              : product.provider === "GCP" ? "bg-blue-900/50 text-blue-300 border border-blue-700/50"
+              : product.provider === "AZURE" ? "bg-indigo-900/50 text-indigo-300 border border-indigo-700/50"
+              : "bg-gray-800 text-gray-300 border border-gray-700"
+          }`}>
+            {isKey ? "🔑 API Key" : product.provider}
+          </span>
           <h1 className="text-3xl font-bold mb-4">{product.name}</h1>
           <p className="text-gray-400 mb-6">{product.description}</p>
           {product.region && (
@@ -65,12 +76,16 @@ export default function ProductDetail() {
           )}
         </div>
         <div>
-          <div className="border border-gray-800 rounded-xl p-6 sticky top-24">
+          <div className={`rounded-xl p-6 sticky top-24 ${
+            isKey
+              ? "border border-purple-900/50 bg-purple-950/20"
+              : "border border-gray-800"
+          }`}>
             <div className="text-3xl font-bold mb-2">${product.priceUsd}</div>
             <div className="text-sm text-gray-400 mb-6">One-time payment</div>
             <div className={`text-sm mb-6 ${product.stock > 0 ? "text-green-400" : "text-red-400"}`}>
               {product.stock > 0
-                ? product.provider === "API_KEY"
+                ? isKey
                   ? `✓ ${product.stock} keys available`
                   : `✓ ${product.stock} accounts available`
                 : "✗ Out of stock"}

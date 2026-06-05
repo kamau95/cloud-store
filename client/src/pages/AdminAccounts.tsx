@@ -27,6 +27,11 @@ interface ApiKeyEntry {
   claimedAt: string | null;
 }
 
+interface ProductInfo {
+  id: string;
+  name: string;
+}
+
 const emptyForm: AccountForm = {
   provider: "AWS",
   email: "",
@@ -41,13 +46,15 @@ type UploadMode = "single" | "bulk";
 export default function AdminAccounts() {
   const [accounts, setAccounts] = useState<AccountEntry[]>([]);
   const [loading, setLoading] = useState(true);
-  const [mode, setMode] = useState<UploadMode>("single");
+  const [accountMode, setAccountMode] = useState<UploadMode>("single");
   const [form, setForm] = useState<AccountForm>(emptyForm);
   const [submitting, setSubmitting] = useState(false);
   const [bulkJson, setBulkJson] = useState("");
   const [search, setSearch] = useState("");
   const [apiKeys, setApiKeys] = useState<ApiKeyEntry[]>([]);
+  const [products, setProducts] = useState<ProductInfo[]>([]);
   const [apiKeyTab, setApiKeyTab] = useState<"accounts" | "keys">("accounts");
+  const [keyMode, setKeyMode] = useState<UploadMode>("single");
   const [keyProductId, setKeyProductId] = useState("");
   const [keyValue, setKeyValue] = useState("");
   const [keyBulkJson, setKeyBulkJson] = useState("");
@@ -131,8 +138,12 @@ export default function AdminAccounts() {
 
   const fetchApiKeys = async () => {
     try {
-      const data = await api.get<ApiKeyEntry[]>("/admin/api-keys");
-      setApiKeys(data);
+      const [keysData, productsData] = await Promise.all([
+        api.get<ApiKeyEntry[]>("/admin/api-keys"),
+        api.get<ProductInfo[]>("/admin/products"),
+      ]);
+      setApiKeys(keysData);
+      setProducts(productsData);
     } catch { /* ignore */ }
   };
 
@@ -221,17 +232,17 @@ export default function AdminAccounts() {
               <h2 className="text-lg font-semibold">Add Accounts</h2>
               <div className="flex gap-1 bg-gray-800 rounded-lg p-0.5">
                 <button
-                  onClick={() => setMode("single")}
+                  onClick={() => setAccountMode("single")}
                   className={`px-3 py-1.5 text-xs rounded-md transition ${
-                    mode === "single" ? "bg-blue-600 text-white" : "text-gray-400 hover:text-white"
+                    accountMode === "single" ? "bg-blue-600 text-white" : "text-gray-400 hover:text-white"
                   }`}
                 >
                   Single
                 </button>
                 <button
-                  onClick={() => setMode("bulk")}
+                  onClick={() => setAccountMode("bulk")}
                   className={`px-3 py-1.5 text-xs rounded-md transition ${
-                    mode === "bulk" ? "bg-blue-600 text-white" : "text-gray-400 hover:text-white"
+                    accountMode === "bulk" ? "bg-blue-600 text-white" : "text-gray-400 hover:text-white"
                   }`}
                 >
                   Bulk
@@ -239,7 +250,7 @@ export default function AdminAccounts() {
               </div>
             </div>
 
-            {mode === "single" ? (
+            {accountMode === "single" ? (
               <form onSubmit={handleSingleSubmit} className="space-y-4">
                 <div className="grid md:grid-cols-3 gap-4">
                   <div>
@@ -370,22 +381,22 @@ export default function AdminAccounts() {
         </>
       ) : (
         <>
-          <div className="border border-gray-800 rounded-xl p-6 mb-8">
+          <div className="border border-purple-900/50 rounded-xl p-6 mb-8">
             <div className="flex items-center gap-4 mb-6">
               <h2 className="text-lg font-semibold">Add API Keys</h2>
               <div className="flex gap-1 bg-gray-800 rounded-lg p-0.5">
                 <button
-                  onClick={() => setMode("single")}
+                  onClick={() => setKeyMode("single")}
                   className={`px-3 py-1.5 text-xs rounded-md transition ${
-                    mode === "single" ? "bg-blue-600 text-white" : "text-gray-400 hover:text-white"
+                    keyMode === "single" ? "bg-purple-600 text-white" : "text-gray-400 hover:text-white"
                   }`}
                 >
                   Single
                 </button>
                 <button
-                  onClick={() => setMode("bulk")}
+                  onClick={() => setKeyMode("bulk")}
                   className={`px-3 py-1.5 text-xs rounded-md transition ${
-                    mode === "bulk" ? "bg-blue-600 text-white" : "text-gray-400 hover:text-white"
+                    keyMode === "bulk" ? "bg-purple-600 text-white" : "text-gray-400 hover:text-white"
                   }`}
                 >
                   Bulk
@@ -393,7 +404,7 @@ export default function AdminAccounts() {
               </div>
             </div>
 
-            {mode === "single" ? (
+            {keyMode === "single" ? (
               <form onSubmit={handleKeySingleSubmit} className="space-y-4">
                 <div className="grid md:grid-cols-2 gap-4">
                   <div>
@@ -430,27 +441,39 @@ export default function AdminAccounts() {
             )}
           </div>
 
-          <h2 className="text-xl font-semibold mb-4">Stored Keys ({apiKeys.length})</h2>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-semibold">Stored Keys ({apiKeys.length})</h2>
+          </div>
           {apiKeys.length === 0 ? (
             <p className="text-gray-500 text-center py-12">No API keys stored.</p>
           ) : (
             <div className="space-y-2">
-              {apiKeys.map((k) => (
-                <div key={k.id} className="border border-gray-800 rounded-lg px-4 py-3 flex items-center justify-between text-sm hover:border-gray-700 transition">
-                  <div className="flex items-center gap-4 flex-1 min-w-0">
-                    <span className="text-purple-400 font-mono text-xs">{k.productId.slice(0, 12)}...</span>
-                    <span className="text-gray-300 font-mono truncate">{k.keyValue}</span>
+              {apiKeys.map((k) => {
+                const productName = products.find((p) => p.id === k.productId)?.name;
+                return (
+                  <div key={k.id} className="border border-purple-900/30 rounded-lg px-4 py-3 flex items-center justify-between text-sm hover:border-purple-700/50 transition">
+                    <div className="flex items-center gap-4 flex-1 min-w-0">
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2 mb-0.5">
+                          <span className="text-purple-400 text-xs font-medium">🔑 Key</span>
+                          {productName && (
+                            <span className="text-gray-500 text-xs truncate">{productName}</span>
+                          )}
+                        </div>
+                        <span className="text-gray-300 font-mono text-xs truncate block">{k.keyValue}</span>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3 ml-4 shrink-0">
+                      <span className={`text-xs font-medium ${k.claimed ? "text-amber-400" : "text-green-400"}`}>
+                        {k.claimed ? "Claimed" : "Available"}
+                      </span>
+                      {!k.claimed && (
+                        <button onClick={() => handleDeleteApiKey(k.id)} className="text-red-400 hover:text-red-300 text-xs transition">Delete</button>
+                      )}
+                    </div>
                   </div>
-                  <div className="flex items-center gap-3 ml-4">
-                    <span className={`text-xs font-medium ${k.claimed ? "text-amber-400" : "text-green-400"}`}>
-                      {k.claimed ? "Claimed" : "Available"}
-                    </span>
-                    {!k.claimed && (
-                      <button onClick={() => handleDeleteApiKey(k.id)} className="text-red-400 hover:text-red-300 text-xs transition">Delete</button>
-                    )}
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </>
