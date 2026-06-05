@@ -44,9 +44,9 @@ export default function Products() {
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-12">
-      <div className="flex items-center justify-between mb-8">
-        <h1 className="text-3xl font-bold">Products</h1>
-        <div className="flex gap-2">
+      <div className="mb-8">
+        <h1 className="text-2xl sm:text-3xl font-bold mb-4 sm:mb-0 sm:pb-0">Products</h1>
+        <div className="flex gap-2 overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0 pb-2 sm:pb-0 scrollbar-none">
           {[
             { label: "ALL", icon: "" },
             { label: "AWS", icon: "☁️" },
@@ -57,7 +57,7 @@ export default function Products() {
             <button
               key={p.label}
               onClick={() => setFilter(p.label)}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
+              className={`shrink-0 px-4 py-2 rounded-lg text-sm font-medium transition ${
                 filter === p.label
                   ? "bg-blue-600 text-white"
                   : "bg-gray-800 text-gray-400 hover:text-white"
