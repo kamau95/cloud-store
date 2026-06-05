@@ -1,0 +1,54 @@
+{
+  "version": "6.0.0",
+  "steps": [
+    {
+      "tag": "CreateEnum",
+      "enum": "public.\"Provider\"",
+      "values": ["AWS", "GCP", "AZURE", "OTHER", "API_KEY"]
+    },
+    {
+      "tag": "CreateTable",
+      "table": "ApiKey",
+      "columns": [
+        { "name": "id", "type": "Text", "default": null, "isRequired": true },
+        { "name": "productId", "type": "Text", "default": null, "isRequired": true },
+        { "name": "keyValue", "type": "Text", "default": null, "isRequired": true },
+        { "name": "claimed", "type": "Boolean", "default": false, "isRequired": true },
+        { "name": "claimedAt", "type": "Timestamp(3)", "default": null, "isRequired": false },
+        { "name": "createdAt", "type": "Timestamp(3)", "default": "now()", "isRequired": true }
+      ],
+      "primaryKey": { "columns": ["id"] },
+      "uniqueConstraints": [],
+      "foreignKeys": [],
+      "indexes": []
+    },
+    {
+      "tag": "AlterTable",
+      "table": "Order",
+      "addColumns": [
+        { "name": "apiKeyId", "type": "Text", "default": null, "isRequired": false }
+      ]
+    },
+    {
+      "tag": "CreateIndex",
+      "index": {
+        "name": "Order_apiKeyId_key",
+        "table": "Order",
+        "columns": ["apiKeyId"],
+        "unique": true
+      }
+    },
+    {
+      "tag": "AddForeignKey",
+      "foreignKey": {
+        "name": "Order_apiKeyId_fkey",
+        "table": "Order",
+        "columns": ["apiKeyId"],
+        "referencedTable": "ApiKey",
+        "referencedColumns": ["id"],
+        "onDelete": "SetNull",
+        "onUpdate": "Cascade"
+      }
+    }
+  ]
+}

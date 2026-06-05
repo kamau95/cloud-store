@@ -15,12 +15,18 @@ export const createProductSchema = z.object({
 
 export const updateProductSchema = createProductSchema.partial();
 
+import * as vault from "../services/vault";
+
 async function enrichStock(products: Array<Record<string, unknown>>): Promise<Array<Record<string, unknown>>> {
   for (const p of products) {
-    const count = await prisma.credential.count({
-      where: { provider: p.provider as Provider, claimed: false },
-    });
-    p.stock = count;
+    if (p.provider === "API_KEY") {
+      p.stock = await vault.countApiKeyStock(p.id as string);
+    } else {
+      const count = await prisma.credential.count({
+        where: { provider: p.provider as Provider, claimed: false },
+      });
+      p.stock = count;
+    }
   }
   return products;
 }

@@ -65,6 +65,13 @@ app.get("/api/health", (_req, res) => {
   res.json({ status: "ok", timestamp: new Date().toISOString(), version: "firebase-auth" });
 });
 
+app.get("/api/settings", (_req, res) => {
+  res.json({
+    telegramUrl: process.env.TELEGRAM_URL || "",
+    whatsappUrl: process.env.WHATSAPP_URL || "",
+  });
+});
+
 app.use("/api/auth", authRoutes);
 app.use("/api/products", productRoutes);
 app.use("/api/orders", orderRoutes);

@@ -79,3 +79,54 @@ export async function reserveCredential(
 
   return { id: updated.id, data: updated as unknown as Record<string, unknown> };
 }
+
+// --- ApiKey operations ---
+
+export async function storeApiKey(
+  id: string,
+  productId: string,
+  keyValue: string
+): Promise<void> {
+  await prisma.apiKey.create({ data: { id, productId, keyValue } });
+}
+
+export async function getApiKey(
+  keyId: string
+): Promise<Record<string, unknown> | null> {
+  try {
+    const key = await prisma.apiKey.findUnique({ where: { id: keyId } });
+    if (!key) return null;
+    return key as unknown as Record<string, unknown>;
+  } catch {
+    return null;
+  }
+}
+
+export async function deleteApiKey(keyId: string): Promise<void> {
+  await prisma.apiKey.delete({ where: { id: keyId } });
+}
+
+export async function listApiKeys(): Promise<
+  Array<{ id: string; productId: string; keyValue: string; claimed: boolean; claimedAt: Date | null }>
+> {
+  return prisma.apiKey.findMany({ orderBy: { createdAt: "desc" } });
+}
+
+export async function reserveApiKey(
+  productId: string
+): Promise<{ id: string; keyValue: string } | null> {
+  const key = await prisma.apiKey.findFirst({
+    where: { productId, claimed: false },
+    orderBy: { createdAt: "asc" },
+  });
+  if (!key) return null;
+  const updated = await prisma.apiKey.update({
+    where: { id: key.id },
+    data: { claimed: true, claimedAt: new Date() },
+  });
+  return { id: updated.id, keyValue: updated.keyValue };
+}
+
+export async function countApiKeyStock(productId: string): Promise<number> {
+  return prisma.apiKey.count({ where: { productId, claimed: false } });
+}

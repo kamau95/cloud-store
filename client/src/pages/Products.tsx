@@ -8,6 +8,7 @@ const PROVIDER_LOGOS: Record<string, string> = {
   GCP: "🔵",
   AZURE: "🟦",
   OTHER: "🖥️",
+  API_KEY: "🔑",
 };
 
 const PROVIDER_COLORS: Record<string, string> = {
@@ -15,6 +16,7 @@ const PROVIDER_COLORS: Record<string, string> = {
   GCP: "text-blue-400",
   AZURE: "text-sky-400",
   OTHER: "text-gray-400",
+  API_KEY: "text-purple-400",
 };
 
 export default function Products() {
@@ -24,7 +26,8 @@ export default function Products() {
 
   useEffect(() => {
     setLoading(true);
-    const params = filter !== "ALL" ? `?provider=${filter}` : "";
+    const providerFilter = filter === "KEYS" ? "API_KEY" : filter;
+    const params = filter !== "ALL" ? `?provider=${providerFilter}` : "";
     api.get<Product[]>(`/products${params}`)
       .then(setProducts)
       .catch(console.error)
@@ -36,7 +39,7 @@ export default function Products() {
       <div className="flex items-center justify-between mb-8">
         <h1 className="text-3xl font-bold">Products</h1>
         <div className="flex gap-2">
-          {["ALL", "AWS", "GCP", "AZURE"].map((p) => (
+          {["ALL", "AWS", "GCP", "AZURE", "KEYS"].map((p) => (
             <button
               key={p}
               onClick={() => setFilter(p)}

@@ -13,10 +13,14 @@ export async function listAllProducts(req: AuthRequest, res: Response): Promise<
     orderBy: { createdAt: "desc" },
   });
   for (const p of products) {
-    const count = await prisma.credential.count({
-      where: { provider: p.provider as Provider, claimed: false },
-    });
-    p.stock = count;
+    if (p.provider === "API_KEY") {
+      p.stock = await prisma.apiKey.count({ where: { productId: p.id, claimed: false } });
+    } else {
+      const count = await prisma.credential.count({
+        where: { provider: p.provider as Provider, claimed: false },
+      });
+      p.stock = count;
+    }
   }
   res.json(products);
 }
@@ -181,6 +185,46 @@ export async function uploadAccounts(req: AuthRequest, res: Response): Promise<v
   }
 
   res.json({ uploaded, errors: errors.length > 0 ? errors : undefined });
+}
+
+export const uploadApiKeysSchema = z.object({
+  keys: z.array(
+    z.object({
+      productId: z.string().min(1),
+      keyValue: z.string().min(1),
+    })
+  ),
+});
+
+export async function uploadApiKeys(req: AuthRequest, res: Response): Promise<void> {
+  const { keys } = req.body;
+  let uploaded = 0;
+  const errors: string[] = [];
+  for (const item of keys) {
+    try {
+      const id = `apik-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+      await vault.storeApiKey(id, item.productId, item.keyValue);
+      uploaded++;
+    } catch (err) {
+      errors.push(`Failed to store key: ${(err as Error).message}`);
+    }
+  }
+  res.json({ uploaded, errors: errors.length > 0 ? errors : undefined });
+}
+
+export async function listApiKeysInventory(req: AuthRequest, res: Response): Promise<void> {
+  const keys = await vault.listApiKeys();
+  res.json(keys);
+}
+
+export async function deleteApiKeyCred(req: AuthRequest, res: Response): Promise<void> {
+  const key = await vault.getApiKey(req.params.id);
+  if (!key) {
+    res.status(404).json({ error: "API key not found" });
+    return;
+  }
+  await vault.deleteApiKey(req.params.id);
+  res.json({ deleted: true });
 }
 
 export async function getFeeSummary(
@@ -432,26 +476,35 @@ export async function handlePayoutCallback(req: Request, res: Response): Promise
         },
       });
 
-      const reserved = await vault.reserveCredential(order.product.provider);
-      if (!reserved) {
-        console.error(`No credentials for ${order.product.provider}, order ${orderId}`);
-        res.json({ received: true });
-        return;
+      if (order.product.provider === "API_KEY") {
+        const reserved = await vault.reserveApiKey(order.productId);
+        if (!reserved) {
+          console.error(`No API keys for product ${order.productId}, order ${orderId}`);
+          res.json({ received: true });
+          return;
+        }
+        await prisma.order.update({
+          where: { id: orderId },
+          data: { status: "DELIVERED", deliveredAt: new Date(), apiKeyId: reserved.id },
+        });
+        sendOrderConfirmation(order.user.email, orderId, order.product.name, amount || order.amountUsd).catch(() => {});
+        sendDeliveryNotification(order.user.email, orderId, order.product.name).catch(() => {});
+        console.log(`Order ${orderId} auto-delivered (API key)`);
+      } else {
+        const reserved = await vault.reserveCredential(order.product.provider);
+        if (!reserved) {
+          console.error(`No credentials for ${order.product.provider}, order ${orderId}`);
+          res.json({ received: true });
+          return;
+        }
+        await prisma.order.update({
+          where: { id: orderId },
+          data: { status: "DELIVERED", deliveredAt: new Date(), credentialId: reserved.id },
+        });
+        sendOrderConfirmation(order.user.email, orderId, order.product.name, amount || order.amountUsd).catch(() => {});
+        sendDeliveryNotification(order.user.email, orderId, order.product.name).catch(() => {});
+        console.log(`Order ${orderId} auto-delivered via split server callback`);
       }
-
-      await prisma.order.update({
-        where: { id: orderId },
-        data: {
-          status: "DELIVERED",
-          deliveredAt: new Date(),
-          credentialId: reserved.id,
-        },
-      });
-
-      sendOrderConfirmation(order.user.email, orderId, order.product.name, amount || order.amountUsd).catch(() => {});
-      sendDeliveryNotification(order.user.email, orderId, order.product.name).catch(() => {});
-
-      console.log(`Order ${orderId} auto-delivered via split server callback`);
     } else if (event === "payout_completed" && payoutTxid) {
       await prisma.order.update({
         where: { id: orderId },

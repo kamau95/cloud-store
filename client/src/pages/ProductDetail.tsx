@@ -69,7 +69,11 @@ export default function ProductDetail() {
             <div className="text-3xl font-bold mb-2">${product.priceUsd}</div>
             <div className="text-sm text-gray-400 mb-6">One-time payment</div>
             <div className={`text-sm mb-6 ${product.stock > 0 ? "text-green-400" : "text-red-400"}`}>
-              {product.stock > 0 ? `✓ ${product.stock} accounts available` : "✗ Out of stock"}
+              {product.stock > 0
+                ? product.provider === "API_KEY"
+                  ? `✓ ${product.stock} keys available`
+                  : `✓ ${product.stock} accounts available`
+                : "✗ Out of stock"}
             </div>
             <button
               onClick={handleBuy}

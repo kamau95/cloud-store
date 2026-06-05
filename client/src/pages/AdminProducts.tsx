@@ -129,6 +129,7 @@ export default function AdminProducts() {
                 <option value="GCP">GCP</option>
                 <option value="AZURE">Azure</option>
                 <option value="OTHER">Other</option>
+                <option value="API_KEY">API Key</option>
               </select>
             </div>
             <div className="md:col-span-2">
@@ -162,7 +163,7 @@ export default function AdminProducts() {
           className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm w-full md:w-64"
         />
         <div className="flex gap-2 flex-wrap">
-          {["ALL", "AWS", "GCP", "AZURE", "OTHER"].map((p) => (
+          {["ALL", "AWS", "GCP", "AZURE", "OTHER", "API_KEY"].map((p) => (
             <button
               key={p}
               onClick={() => setFilterProvider(p)}

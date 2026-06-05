@@ -108,7 +108,7 @@ export default function OrderDetail() {
             disabled={fetchingCreds}
             className="bg-green-600 hover:bg-green-500 disabled:opacity-50 px-6 py-2.5 rounded-lg font-medium transition"
           >
-            {fetchingCreds ? "Loading..." : "View Credentials"}
+            {fetchingCreds ? "Loading..." : order.product.provider === "API_KEY" ? "View Key" : "View Credentials"}
           </button>
         </div>
       )}
@@ -118,16 +118,25 @@ export default function OrderDetail() {
           <div className="flex items-center gap-2 mb-4">
             <span className="text-amber-400 text-lg">⚠️</span>
             <p className="text-amber-400 text-sm font-medium">
-              Save these credentials now. They won't be shown again.
+              {credentials.keyValue
+                ? "Save this API key now. It won't be shown again."
+                : "Save these credentials now. They won't be shown again."}
             </p>
           </div>
           <div className="space-y-3 bg-gray-900 rounded-lg p-4 font-mono text-sm">
-            {Object.entries(credentials).filter(([k]) => k !== "warning").map(([key, value]) => (
-              <div key={key} className="flex">
-                <span className="text-gray-500 min-w-[120px] capitalize">{key.replace(/([A-Z])/g, ' $1')}:</span>
-                <span className="text-gray-200 break-all">{String(value)}</span>
+            {credentials.keyValue ? (
+              <div className="flex">
+                <span className="text-gray-500 min-w-[120px] capitalize">API Key:</span>
+                <span className="text-gray-200 break-all">{String(credentials.keyValue)}</span>
               </div>
-            ))}
+            ) : (
+              Object.entries(credentials).filter(([k]) => k !== "warning").map(([key, value]) => (
+                <div key={key} className="flex">
+                  <span className="text-gray-500 min-w-[120px] capitalize">{key.replace(/([A-Z])/g, ' $1')}:</span>
+                  <span className="text-gray-200 break-all">{String(value)}</span>
+                </div>
+              ))
+            )}
           </div>
         </div>
       )}

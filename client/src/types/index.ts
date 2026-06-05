@@ -14,7 +14,7 @@ export interface AuthResponse {
 export interface Product {
   id: string;
   name: string;
-  provider: "AWS" | "GCP" | "AZURE" | "OTHER";
+  provider: "AWS" | "GCP" | "AZURE" | "OTHER" | "API_KEY";
   description: string;
   priceUsd: number;
   region?: string;

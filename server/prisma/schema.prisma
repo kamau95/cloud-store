@@ -19,6 +19,7 @@ enum Provider {
   GCP
   AZURE
   OTHER
+  API_KEY
 }
 
 enum OrderStatus {
@@ -64,32 +65,34 @@ model Product {
 }
 
 model Order {
-  id              String          @id @default(cuid())
-  userId          String
-  productId       String
-  status          OrderStatus     @default(PENDING)
-  paymentProvider PaymentProvider?
-  paymentChargeId String?
-  credentialId    String?         @unique
-  amountUsd       Float
-  cryptoAddress   String?
-  cryptoAmount    Float?
-  cryptoCurrency  String?
-  cryptoExpiresAt DateTime?
-  cryptoNetwork   String?
-  adminFee        Float?
-  gatewayFee      Float?
-  sellerAmount         Float?
-  displayedNetworkFee  Float?
-  payoutTxid           String?
-  paidAt               DateTime?
-  deliveredAt     DateTime?
-  createdAt       DateTime        @default(now())
-  updatedAt       DateTime        @updatedAt
+  id                  String           @id @default(cuid())
+  userId              String
+  productId           String
+  status              OrderStatus      @default(PENDING)
+  paymentProvider     PaymentProvider?
+  paymentChargeId     String?
+  credentialId        String?          @unique
+  apiKeyId            String?          @unique
+  amountUsd           Float
+  cryptoAddress       String?
+  cryptoAmount        Float?
+  cryptoCurrency      String?
+  cryptoExpiresAt     DateTime?
+  cryptoNetwork       String?
+  adminFee            Float?
+  gatewayFee          Float?
+  sellerAmount        Float?
+  displayedNetworkFee Float?
+  payoutTxid          String?
+  paidAt              DateTime?
+  deliveredAt         DateTime?
+  createdAt           DateTime         @default(now())
+  updatedAt           DateTime         @updatedAt
 
-  user       User       @relation(fields: [userId], references: [id], onDelete: Restrict)
-  product    Product    @relation(fields: [productId], references: [id], onDelete: Restrict)
+  user       User        @relation(fields: [userId], references: [id], onDelete: Restrict)
+  product    Product     @relation(fields: [productId], references: [id], onDelete: Restrict)
   credential Credential? @relation(fields: [credentialId], references: [id], onDelete: SetNull)
+  apiKey     ApiKey?     @relation(fields: [apiKeyId], references: [id], onDelete: SetNull)
 }
 
 model Credential {
@@ -107,7 +110,18 @@ model Credential {
   updatedAt DateTime  @updatedAt
 
   orders Order[]
-  seller User?  @relation("SellerCreds", fields: [sellerId], references: [id])
+  seller User?   @relation("SellerCreds", fields: [sellerId], references: [id])
+}
+
+model ApiKey {
+  id        String    @id
+  productId String
+  keyValue  String
+  claimed   Boolean   @default(false)
+  claimedAt DateTime?
+  createdAt DateTime  @default(now())
+
+  order Order?
 }
 
 model AuthEvent {

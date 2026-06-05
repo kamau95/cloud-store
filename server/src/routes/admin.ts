@@ -15,6 +15,9 @@ router.delete("/orders/:id", admin.deleteOrder);
 router.post("/accounts/upload", validate(admin.uploadAccountsSchema), admin.uploadAccounts);
 router.get("/accounts", admin.listAccountPool);
 router.delete("/accounts/:id", admin.deleteAccountCredential);
+router.post("/api-keys/upload", validate(admin.uploadApiKeysSchema), admin.uploadApiKeys);
+router.get("/api-keys", admin.listApiKeysInventory);
+router.delete("/api-keys/:id", admin.deleteApiKeyCred);
 
 router.get("/users", admin.getUsers);
 router.patch("/users/:id/role", requireSuperAdmin, validate(admin.updateRoleSchema), admin.updateUserRole);

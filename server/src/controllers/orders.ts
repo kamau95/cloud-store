@@ -21,9 +21,14 @@ export async function checkout(req: AuthRequest, res: Response): Promise<void> {
     res.status(404).json({ error: "Product not found or unavailable" });
     return;
   }
-  const availableCreds = await prisma.credential.count({
-    where: { provider: product.provider as Provider, claimed: false },
-  });
+  let availableCreds = 0;
+  if (product.provider === "API_KEY") {
+    availableCreds = await prisma.apiKey.count({ where: { productId: product.id, claimed: false } });
+  } else {
+    availableCreds = await prisma.credential.count({
+      where: { provider: product.provider as Provider, claimed: false },
+    });
+  }
   if (availableCreds < 1) {
     res.status(400).json({ error: "Out of stock" });
     return;
@@ -175,7 +180,10 @@ export async function getOrderPaymentStatus(req: AuthRequest, res: Response): Pr
 }
 
 export async function getOrderCredentials(req: AuthRequest, res: Response): Promise<void> {
-  const order = await prisma.order.findUnique({ where: { id: req.params.id } });
+  const order = await prisma.order.findUnique({
+    where: { id: req.params.id },
+    include: { product: true },
+  });
   if (!order) {
     res.status(404).json({ error: "Order not found" });
     return;
@@ -186,6 +194,22 @@ export async function getOrderCredentials(req: AuthRequest, res: Response): Prom
   }
   if (order.status !== "DELIVERED") {
     res.status(400).json({ error: "Order not yet delivered" });
+    return;
+  }
+  if (order.product.provider === "API_KEY") {
+    if (!order.apiKeyId) {
+      res.status(404).json({ error: "No API key found for this order" });
+      return;
+    }
+    const key = await vault.getApiKey(order.apiKeyId);
+    if (!key) {
+      res.status(404).json({ error: "API key not found in vault" });
+      return;
+    }
+    res.json({
+      ...key,
+      warning: "This API key is shown once. Save it securely.",
+    });
     return;
   }
   if (!order.credentialId) {
